@@ -65,7 +65,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!allow)
             {
-                capi.SendChatMessage("Server tried to send a schematic file, but it was rejected. To accept, set allowSaveFilesFromServer to true in clientsettings.json (be aware of potential security implications!).");
+                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected. To accept, set allowSaveFilesFromServer to true in clientsettings.json (be aware of potential security implications!).");
                 return;
             }
 
@@ -85,11 +85,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                     textWriter.Close();
                 }
 
-                capi.SendChatMessage(string.Format("Schematic file {0} received and saved", message.Filename));
+                capi.ShowChatMessage(string.Format("Schematic file {0} received and saved", message.Filename));
             }
             catch (IOException e)
             {
-                capi.SendChatMessage("Server sent a schematic file, but failed to save it: " + e.Message);
+                capi.ShowChatMessage("Server sent a schematic file, but failed to save it: " + e.Message);
             }
         }
 
