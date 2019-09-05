@@ -10,8 +10,8 @@ namespace Vintagestory.ServerMods.WorldEdit
     {
         void Init(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess);
 
-        void OnBuild(WorldEdit worldEdit, BlockPos pos, ushort oldBlockId, BlockFacing onBlockFace, Vec3f hitPosition);
-        void OnBreak(WorldEdit worldEdit, BlockPos pos, ushort oldBlockId, BlockFacing onBlockFace, Vec3f hitPosition);
+        void OnBuild(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockFacing onBlockFace, Vec3f hitPosition);
+        void OnBreak(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockFacing onBlockFace, Vec3f hitPosition);
         bool OnWorldEditCommand(WorldEdit worldEdit, string[] args);
         Vec3i Size { get; }
     }
@@ -51,7 +51,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         }
 
-        public virtual void OnBuild(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public virtual void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             Block placedBlock = blockAccessRev.GetBlock(blockSel.Position);
             BlockPos targetPos = blockSel.Position.Copy();
@@ -70,7 +70,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        public virtual void OnBreak(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel)
+        public virtual void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
         {
             Block block = blockAccessRev.GetBlock(blockSel.Position);
             BlockPos targetPos = blockSel.Position.Copy();
@@ -89,12 +89,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        public virtual bool ApplyToolBuild(WorldEdit worldEdit, Block block, ushort oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        public virtual bool ApplyToolBuild(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
             return false;
         }
 
-        public virtual bool ApplyToolBreak(WorldEdit worldEdit, Block block, ushort oldBlockId, BlockSelection blockSel, BlockPos targetPos)
+        public virtual bool ApplyToolBreak(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos)
         {
             return false;
         }

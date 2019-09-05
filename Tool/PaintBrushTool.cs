@@ -382,17 +382,17 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        public override bool ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, ushort oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        public override bool ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
             return PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
         }
 
-        public bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, ushort oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
+        public bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
             if (BrushDim1 <= 0) return false;
 
             Block selectedBlock = blockSel.DidOffset ? blockAccessRev.GetBlock(blockSel.Position.AddCopy(blockSel.Face.GetOpposite())) : blockAccessRev.GetBlock(oldBlockId);
 
-            ushort selectedBlockId = selectedBlock.BlockId;
+            int selectedBlockId = selectedBlock.BlockId;
             if (this is EraserTool) selectedBlockId = oldBlockId;
 
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
@@ -401,7 +401,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             EnumBrushMode brushMode = BrushMode;
 
-            ushort blockId = placedBlock.BlockId;
+            int blockId = placedBlock.BlockId;
 
             if (!worldEdit.MayPlace(blockAccessRev.GetBlock(blockId), brushPositions.Length)) return false;
 

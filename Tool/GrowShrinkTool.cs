@@ -36,19 +36,19 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return new Vec3i((int)BrushRadius, (int)BrushRadius, (int)BrushRadius); }
         }
 
-        public override void OnBreak(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
         {
             GrowShrink(worldEdit, oldBlockId, blockSel, null, true);
         }
 
-        public override void OnBuild(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             GrowShrink(worldEdit, oldBlockId, blockSel, withItemStack);
         }
 
       
 
-        public bool GrowShrink(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack, bool shrink = false)
+        public bool GrowShrink(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack, bool shrink = false)
         {
             if (BrushRadius == 0) return false;
 
@@ -60,7 +60,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             }
 
-            ushort selectedBlockID = blockAccessRev.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.GetOpposite()));
+            int selectedBlockID = blockAccessRev.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.GetOpposite()));
 
             int radInt = (int)Math.Ceiling(BrushRadius);
             float radSq = BrushRadius * BrushRadius;

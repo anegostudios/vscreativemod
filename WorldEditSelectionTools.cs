@@ -150,7 +150,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         RotatePosition(ref dx, ref dy, ref dz, angle, originx, originz);
 
                         newPos.Set(startPos.X + dx, startPos.Y + dy, startPos.Z + dz);
-                        ushort prevBlockId = workspace.revertableBlockAccess.GetBlockId(curPos);
+                        int prevBlockId = workspace.revertableBlockAccess.GetBlockId(curPos);
                         workspace.revertableBlockAccess.SetBlock(prevBlockId, newPos);
 
                         curPos.Z++;
@@ -276,7 +276,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         while (curPos.Z < endPos.Z)
                         {
-                            ushort blockId = workspace.revertableBlockAccess.GetBlockId(curPos);
+                            int blockId = workspace.revertableBlockAccess.GetBlockId(curPos);
 
                             if (workspace.world.Blocks[blockId].EntityClass != null)
                             {
@@ -379,7 +379,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     while (curPos.Z < endPos.Z)
                     {
-                        ushort blockId = workspace.revertableBlockAccess.GetBlockId(curPos);
+                        int blockId = workspace.revertableBlockAccess.GetBlockId(curPos);
 
                         if (dir.Axis == EnumAxis.Y)
                         {
@@ -581,7 +581,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     while (curPos.Z < endPos.Z)
                     {
                         newPos.Set(curPos.X + dx, curPos.Y + dy, curPos.Z + dz);
-                        ushort prevBlockId = workspace.revertableBlockAccess.GetBlockId(curPos);
+                        int prevBlockId = workspace.revertableBlockAccess.GetBlockId(curPos);
                         workspace.revertableBlockAccess.SetBlock(prevBlockId, newPos);
                         
                         curPos.Z++;
@@ -613,7 +613,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private int FillArea(ushort blockId, BlockPos start, BlockPos end)
+        private int FillArea(int blockId, BlockPos start, BlockPos end)
         {
             int updated = 0;
 

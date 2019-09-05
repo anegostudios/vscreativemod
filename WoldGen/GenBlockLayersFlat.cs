@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Vintagestory.API.Common;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 using Vintagestory.ServerMods.NoObf;
 
@@ -11,7 +12,7 @@ namespace Vintagestory.ServerMods
         private int chunksize;
         private ICoreServerAPI api;
 
-        ushort[] blockIds;
+        int[] blockIds;
 
         public override bool ShouldLoad(EnumAppSide side)
         {
@@ -54,17 +55,17 @@ namespace Vintagestory.ServerMods
             IAsset asset = api.Assets.Get("worldgen/layers.json");
             FlatWorldGenConfig flatwgenConfig = asset.ToObject<FlatWorldGenConfig>();
 
-            List<ushort> blockIds = new List<ushort>();
+            List<int> blockIds = new List<int>();
 
             for (int i = 0; i < flatwgenConfig.blockCodes.Length; i++)
             {
-                ushort blockId = api.WorldManager.GetBlockId(flatwgenConfig.blockCodes[i]);
+                int blockId = api.WorldManager.GetBlockId(flatwgenConfig.blockCodes[i]);
                 if (blockId != 0) blockIds.Add(blockId);
             }
 
             if (blockIds.Count == 0 && flatwgenConfig.blockCodes.Length > 0)
             {
-                ushort blockId = api.World.GetBlock(new AssetLocation("creativeblock-1")).BlockId;
+                int blockId = api.World.GetBlock(new AssetLocation("creativeblock-1")).BlockId;
                 if (blockId != 0)
                 {
                     blockIds.Add(blockId);
@@ -79,17 +80,17 @@ namespace Vintagestory.ServerMods
             api.WorldManager.SetSealLevel(blockIds.Count);
         }
 
-        private void OnChunkColumnGeneration(IServerChunk[] chunks, int chunkX, int chunkZ)
+        private void OnChunkColumnGeneration(IServerChunk[] chunks, int chunkX, int chunkZ, ITreeAttribute chunkGenParams = null)
         {
             // Because blockdata is cached and not cleaned after release
             for (int y = 0; y < chunks.Length; y++)
             {
-                ushort[] blockdata = chunks[y].Blocks;
-                for (int i = 0; i < blockdata.Length; i++) blockdata[i] = 0;
+                IServerChunk chunk = chunks[y];
+                for (int i = 0; i < chunk.Blocks.Length; i++) chunk.Blocks[i] = 0;
             }
 
 
-            ushort[] blocks = chunks[0].Blocks;
+            IServerChunk botChunk = chunks[0];
             ushort[] rainheightmap = chunks[0].MapChunk.RainHeightMap;
             ushort[] terrainheightmap = chunks[0].MapChunk.WorldGenTerrainHeightMap;
 
@@ -107,7 +108,7 @@ namespace Vintagestory.ServerMods
 
                     for (int i = 0; i < blockIds.Length; i++)
                     {
-                        blocks[index3d] = blockIds[i];
+                        botChunk.Blocks[index3d] = blockIds[i];
                         index3d += yMove;
                     }
                 }

@@ -74,17 +74,17 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
         
 
-        public override void OnBreak(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
         {
             ApplyTool(worldEdit, blockSel.Position, oldBlockId, blockSel.Face, null, true);
         }
 
-        public override void OnBuild(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             ApplyTool(worldEdit, blockSel.Position, oldBlockId, blockSel.Face, withItemStack);
         }
 
-        private void ApplyTool(WorldEdit worldEdit, BlockPos pos, ushort oldBlockId, BlockFacing onBlockFace, ItemStack withItemstack, bool remove = false)
+        private void ApplyTool(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockFacing onBlockFace, ItemStack withItemstack, bool remove = false)
         {
             mapheight = worldEdit.sapi.WorldManager.MapSizeY;
 

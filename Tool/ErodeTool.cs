@@ -160,12 +160,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         }
 
-        public override void OnBreak(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
         {
             
         }
 
-        public override void OnBuild(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             if (BrushRadius <= 0) return;
 

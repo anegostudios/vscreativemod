@@ -65,18 +65,18 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        public override void OnBreak(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
         {
             startPos = blockSel.Position.Copy();
             worldEdit.Good("Line Tool start position set");
 
-            ushort blockId = blockAccessRev.GetBlockId(blockSel.Position);
+            int blockId = blockAccessRev.GetBlockId(blockSel.Position);
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, oldBlockId);
             blockAccessRev.Commit();
         }
 
-        public override void OnBuild(WorldEdit worldEdit, ushort oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             if (startPos == null) return;
 
@@ -103,7 +103,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
         
         // http://members.chello.at/~easyfilter/bresenham.html
-        void plotLine3d(ushort blockId, ItemStack withItemStack, int x0, int y0, int z0, int x1, int y1, int z1)
+        void plotLine3d(int blockId, ItemStack withItemStack, int x0, int y0, int z0, int x1, int y1, int z1)
         {
             int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
             int dy = Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;

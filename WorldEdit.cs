@@ -64,7 +64,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             
             exportFolderPath = sapi.GetOrCreateDataPath("WorldEdit");
 
-            sapi.RegisterPrivilege("worldedit", "Ability to use world edit tools");
+            sapi.Permissions.RegisterPrivilege("worldedit", "Ability to use world edit tools");
 
             sapi.RegisterCommand("we", "World edit tools", "[ms|me|mc|mex|clear|mclear|mfill|imp|impr|blu|brs|brm|ers|range|tool|on|off|undo|redo|sovp|hp|sp|block|...]", CmdEditServer, "worldedit");
 
@@ -421,7 +421,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         return;
                     }
 
-                    sapi.World.BlockAccessor.SetBlock((ushort)stack.Id, centerPos.DownCopy());
+                    sapi.World.BlockAccessor.SetBlock(stack.Id, centerPos.DownCopy());
                     
                     Good("Block placed");
 
@@ -846,7 +846,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         return;
                     }
 
-                    int filled = FillArea((ushort)stack.Id, workspace.StartMarker, workspace.EndMarker);
+                    int filled = FillArea(stack.Id, workspace.StartMarker, workspace.EndMarker);
 
                     Good(filled + " marked blocks placed");
 
@@ -1054,12 +1054,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void BlockLineup(BlockPos pos, CmdArgs args)
         {
-            Block[] blocks = sapi.World.Blocks;
+            List<Block> blocks = sapi.World.Blocks;
 
             bool all = args.PopWord() == "all"; 
 
             List<Block> existingBlocks = new List<Block>();
-            for (int i = 0; i < blocks.Length; i++)
+            for (int i = 0; i < blocks.Count; i++)
             {
                 Block block = blocks[i];
 
@@ -1109,7 +1109,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private void OnDidBuildBlock(IServerPlayer byPlayer, ushort oldblockId, BlockSelection blockSel, ItemStack withItemStack)
+        private void OnDidBuildBlock(IServerPlayer byPlayer, int oldblockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             this.fromPlayer = byPlayer;
             if (!CanUseWorldEdit(byPlayer)) return;
@@ -1121,7 +1121,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.ToolInstance.OnBuild(this, oldblockId, blockSel.Clone(), withItemStack);
         }
 
-        private void OnDidBreakBlock(IServerPlayer byBplayer, ushort oldblockId, BlockSelection blockSel)
+        private void OnDidBreakBlock(IServerPlayer byBplayer, int oldblockId, BlockSelection blockSel)
         {
             this.fromPlayer = byBplayer;
             if (!CanUseWorldEdit(byBplayer)) return;
