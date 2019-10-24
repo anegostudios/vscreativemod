@@ -307,7 +307,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
                 case "cloudlevel":
 
-                    amb.CloudDensity.Value = float.Parse(newValue) / 25f - 2;
+                    amb.CloudDensity.Value = float.Parse(newValue) / 100f;
                     amb.CloudDensity.Weight = 1;
 
                     SendGlobalAmbient();
@@ -404,7 +404,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "fogblue":
                     return ""+(int)(amb.FogColor.Value[2] * 255);
                 case "cloudlevel":
-                    return ""+ (int)((amb.CloudDensity.Value + 2) * 25);
+                    return ""+ (int)(amb.CloudDensity.Value * 100);
                 case "cloudbrightness":
                     return ""+ (int)(amb.CloudBrightness.Value * 100);
                 case "movespeed":

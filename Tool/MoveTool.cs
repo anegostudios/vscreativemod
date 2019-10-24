@@ -81,7 +81,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "down":
                     {
                         BlockFacing facing = BlockFacing.FromCode(cmd);
-                        Handle(worldEdit, facing.Normali * Amount);
+                        Handle(worldEdit, facing.Normali);
                         return true;
                     }
             }

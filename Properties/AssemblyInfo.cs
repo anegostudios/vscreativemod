@@ -40,7 +40,8 @@ using Vintagestory.API.Config;
 [assembly: AssemblyFileVersion(GameVersion.OverallVersion)]
 
 [assembly: ModInfo( "Creative Mode", "creative",
-    Version = GameVersion.NetworkVersion, // So that players with newer versions of the game can still connect
+    Version = GameVersion.ShortGameVersion,
+    NetworkVersion = GameVersion.NetworkVersion,
     Description = "Adds extensive world editing capabilities through commands, a graphical user interface and super flat world generation",
     Authors = new[] { "Tyron" },
     RequiredOnClient = true,
