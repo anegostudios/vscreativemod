@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Windows.Forms;
 using Vintagestory.API.Client;
@@ -8,6 +9,7 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -307,7 +309,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if ((cmd == "tr" || cmd == "tsx" || cmd == "tsy" || cmd == "tsz") && args.Length > 0)
             {
                 double val = 0;
-                if (double.TryParse(args[0], out val))
+                if (double.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out val))
                 {
                     if (val > 50 && serverOverloadProtection)
                     {
@@ -327,7 +329,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 0)
                     {
-                        if (!int.TryParse(args[0], out angle))
+                        if (!int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out angle))
                         {
                             Bad("Invalid Angle (not a number)");
                             break;
@@ -493,7 +495,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         string suppliedToolname = args.PopAll();
 
                         int toolId;
-                        if (int.TryParse(suppliedToolname, out toolId))
+                        if (int.TryParse(suppliedToolname, NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out toolId))
                         {
                             if (toolId < 0)
                             {
@@ -542,7 +544,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         int index = 0;
                         if (args.Length > 0)
                         {
-                            int.TryParse(args[0], out index);
+                            index = args[0].ToInt(0);
                         }
                         mode = (EnumToolOffsetMode)index;
                     } catch (Exception) { }
@@ -560,9 +562,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 0)
                     {
-                        float range;
-                        float.TryParse(args[0], out range);
-                        pickingrange = range;
+                        pickingrange = args[0].ToFloat(GlobalConstants.DefaultPickingRange);
                     }
 
                     fromPlayer.WorldData.PickingRange = pickingrange;
@@ -876,7 +876,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
 
                         int size = 0;
-                        if (!int.TryParse(args[0], out size))
+                        if (!int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size))
                         {
                             Bad("Invalide size param");
                             return;
@@ -885,7 +885,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         int height = 20;
                         if (args.Length > 1)
                         {
-                            int.TryParse(args[1], out height);
+                            int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out height);
                         }
 
 
@@ -1041,7 +1041,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int steps = 1;
             if (args.Length > 0)
             {
-                int.TryParse(args[0], out steps);
+                int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out steps);
             }
 
             workspace.revertableBlockAccess.ChangeHistoryState(steps * (redo ? -1 : 1));

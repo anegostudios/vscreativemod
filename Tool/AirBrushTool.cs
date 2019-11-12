@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 
 namespace Vintagestory.ServerMods.WorldEdit
@@ -76,7 +78,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     if (args.Length > 1)
                     {
                         float size;
-                        float.TryParse(args[1], out size);
+                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size);
                         Radius = size;
                     }
 
@@ -101,7 +103,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     if (args.Length > 1)
                     {
                         float quant;
-                        float.TryParse(args[1], out quant);
+                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out quant);
                         Quantity = quant;
                     }
 
