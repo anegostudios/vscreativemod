@@ -210,7 +210,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                             if (Apply == EnumAirBrushApply.SelectedFace && BlockFacing.ALLFACES[i] != blockSel.Face) continue;
 
                             ddpos = dpos.AddCopy(BlockFacing.ALLFACES[i]);
-                            if (blockAccessRev.GetBlock(ddpos).Replaceable >= 6000)
+                            Block dblock = blockAccessRev.GetBlock(ddpos);
+                            if (dblock.Replaceable >= 6000 && (dblock.IsLiquid() == block.IsLiquid()))
                             {
                                 // We found an air block beside a solid block -> let's remember that air block and keep looking
                                 if (mode == EnumAirBrushMode.Add)

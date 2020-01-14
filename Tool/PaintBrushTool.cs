@@ -526,17 +526,28 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
 
                 case EnumBrushShape.Cuboid:
-                    
+
+                    int notminx = (dim1Int - cutoutDim1Int) / 2; 
+                    int notmaxx = notminx + cutoutDim1Int;
+
+                    int notminy = (dim2Int - cutoutDim2Int) / 2;
+                    int notmaxy = notminy + cutoutDim2Int;
+
+                    int notminz = (dim3Int - cutoutDim3Int) / 2;
+                    int notmaxz = notminz + cutoutDim3Int;
+
+
                     for (int dx = 0; dx < dim1Int; dx++)
                     {
                         for (int dy = 0; dy < dim2Int; dy++)
                         {
                             for (int dz = 0; dz < dim3Int; dz++)
                             {
+                                if (dx >= notminx && dx < notmaxx && dy >= notminy && dy < notmaxy && dz >= notminz && dz < notmaxz) continue;
+
                                 x = dx - dim1Int / 2;
                                 y = dy - dim2Int / 2;
                                 z = dz - dim3Int / 2;
-                                if (Math.Abs(x) < cutoutDim1Int || Math.Abs(y) < cutoutDim2Int || Math.Abs(z) < cutoutDim3Int) continue;
 
                                 positions.Add(new BlockPos(x, y, z));
                             }

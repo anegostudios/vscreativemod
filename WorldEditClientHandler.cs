@@ -312,6 +312,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     SendGlobalAmbient();
                     break;
+                case "cloudypos":
+                    amb.CloudYPos.Value = float.Parse(newValue) / 255f;
+                    amb.CloudYPos.Weight = 1;
+                    SendGlobalAmbient();
+                    break;
                 case "cloudbrightness":
                     amb.CloudBrightness.Value = float.Parse(newValue) / 100f;
                     amb.CloudBrightness.Weight = 1;
@@ -371,6 +376,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             amb.CloudBrightness.Weight = newWeight;
             amb.CloudDensity.Weight = newWeight;
+            amb.CloudYPos.Weight = newWeight;
 
             string jsoncode = JsonConvert.SerializeObject(amb);
             capi.SendChatMessage("/setambient " + jsoncode);
@@ -405,6 +411,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return ""+(int)(amb.FogColor.Value[2] * 255);
                 case "cloudlevel":
                     return ""+ (int)(amb.CloudDensity.Value * 100);
+                case "cloudypos":
+                    return "" + (int)(amb.CloudYPos.Value * 255);
                 case "cloudbrightness":
                     return ""+ (int)(amb.CloudBrightness.Value * 100);
                 case "movespeed":

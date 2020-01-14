@@ -57,7 +57,10 @@ using Vintagestory.API.Config;
 			    worldConfig: {
 				    worldClimate: ""superflat"",
 				    gameMode: ""creative"",
-				    hoursPerDay: 2400
+				    hoursPerDay: ""2400"",
+					cloudypos: ""0.5"",
+					temporalStability: ""false"",
+                    temporalStorms: ""off""
 			    }
 		    }
 	    ],
