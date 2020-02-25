@@ -709,10 +709,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
 
 
-               /* case "mr":
-                    HandleRotateCommand(args.PopInt(), args.PopSingle());
+                case "mr":
+                    HandleRotateCommand(args.PopInt(), args.PopWord());
                     break;
-                    */
+                    
 
                 case "mmirn":
                     HandleMirrorCommand(BlockFacing.NORTH, args);

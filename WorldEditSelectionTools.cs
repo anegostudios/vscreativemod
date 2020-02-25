@@ -65,9 +65,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-  /*      private void HandleRotateCommand(int? maybeangle, string centerarg)
+        private void HandleRotateCommand(int? maybeangle, string centerarg)
         {
-            EnumOrigin origin = (centerarg != null && centerarg.StartsWith("c")) ? EnumOrigin.BottomCenter : EnumOrigin.StartPos;
+            //EnumOrigin origin = (centerarg != null && centerarg.StartsWith("c")) ? EnumOrigin.BottomCenter : EnumOrigin.StartPos;
 
             if (workspace.StartMarker == null || workspace.EndMarker == null)
             {
@@ -86,144 +86,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
-            BlockPos startm = workspace.StartMarker;
-            BlockPos endm = workspace.EndMarker;
+            EnumOrigin origin = EnumOrigin.BottomCenter;
+            BlockPos mid = (workspace.StartMarker + workspace.EndMarker) / 2;
 
-            Dictionary<BlockPos, ITreeAttribute> blockEntityData = new Dictionary<BlockPos, ITreeAttribute>();
-            BlockPos startPos = new BlockPos(Math.Min(startm.X, endm.X), Math.Min(startm.Y, endm.Y), Math.Min(startm.Z, endm.Z));
-            BlockPos endPos = new BlockPos(Math.Max(startm.X, endm.X), Math.Max(startm.Y, endm.Y), Math.Max(startm.Z, endm.Z));
-            BlockPos curPos = startPos.Copy();
-            BlockPos originPos = origin == EnumOrigin.BottomCenter ? (startm + endm) / 2 : startm;
-            BlockPos newPos = new BlockPos();
-            int dx, dy, dz;
-            int originx = origin == EnumOrigin.BottomCenter ? endPos.X - startPos.X : 0;
-            int originz = origin == EnumOrigin.BottomCenter ? endPos.Z - startPos.Z : 0;
+            BlockSchematic schematic = CopyArea(workspace.StartMarker, workspace.EndMarker);
+            schematic.TransformWhilePacked(sapi.World, origin, angle, null);
+            FillArea(0, workspace.StartMarker, workspace.EndMarker);
 
-            // Clear area
-            while (curPos.X < endPos.X)
-            {
-                curPos.Y = startPos.Y;
-                while (curPos.Y < endPos.Y)
-                {
-                    curPos.Z = startPos.Z;
-                    while (curPos.Z < endPos.Z)
-                    {
-                        BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(curPos);
-                        if (be != null)
-                        {
-                            TreeAttribute tree = new TreeAttribute();
-                            be.ToTreeAttributes(tree);
-
-                            dx = curPos.X - startPos.X;
-                            dy = curPos.Y - startPos.Y;
-                            dz = curPos.Z - startPos.Z;
-
-                            RotatePosition(ref dx, ref dy, ref dz, angle, originx, originz);
-                            blockEntityData[curPos.AddCopy(dx, dy, dz)] = tree;
-                        }
-
-                        workspace.revertableBlockAccess.SetBlock(0, curPos);
-
-                        curPos.Z++;
-                    }
-
-                    curPos.Y++;
-                }
-                curPos.X++;
-            }
-
-            Vec3d origind = origin == EnumOrigin.BottomCenter ? new Vec3d((int)Math.Ceiling(-(startm.X + endm.X) / 2.0), startm.Y, (int)Math.Ceiling(-(startm.Z + endm.Z) / 2.0)) : startm.ToVec3d();
-
-            // Place rotated version
-            curPos = startPos.Copy();
-            while (curPos.X < endPos.X)
-            {
-                curPos.Y = startPos.Y;
-                while (curPos.Y < endPos.Y)
-                {
-                    curPos.Z = startPos.Z;
-                    while (curPos.Z < endPos.Z)
-                    {
-                        dx = curPos.X - startPos.X + 1;
-                        dy = curPos.Y - startPos.Y;
-                        dz = curPos.Z - startPos.Z + 1;
-                        RotatePosition(ref dx, ref dy, ref dz, angle, originx, originz);
-
-                        newPos.Set(startPos.X + dx, startPos.Y + dy, startPos.Z + dz);
-                        int prevBlockId = workspace.revertableBlockAccess.GetBlockId(curPos);
-                        workspace.revertableBlockAccess.SetBlock(prevBlockId, newPos);
-
-                        curPos.Z++;
-                    }
-
-                    curPos.Y++;
-                }
-                curPos.X++;
-            }
-
-            workspace.revertableBlockAccess.Commit();
-            
-            Good(string.Format("Area rotated by {0} degrees", angle));
-            
-
-            dx = 0;
-            dy = 0;
-            dz = 0;
-            RotatePosition(ref dx, ref dy, ref dz, angle, originx, originz);
-            workspace.StartMarker = workspace.StartMarker + new BlockPos(dx, dy, dz);
-
-            dx = endm.X - startm.X;
-            dy = endm.Y - startm.Y;
-            dz = endm.Z - startm.Z;
-            RotatePosition(ref dx, ref dy, ref dz, angle, originx, originz);
-            workspace.EndMarker = workspace.StartMarker + new BlockPos(dx, dy, dz);
-
+            PasteBlockData(schematic, mid, origin);
 
             ResendBlockHighlights();
         }
-        */
-
-
-        void RotatePosition(ref int x, ref int y, ref int z, int angle, int originx, int originz)
-        {
-            x -= originx / 2;
-            z -= originz / 2;
-
-            angle = GameMath.Mod(angle, 360);
-
-            // 90 deg:
-            // xNew = -yOld
-            // yNew = xOld
-
-            // 180 deg:
-            // xNew = -xOld
-            // yNew = -yOld
-
-            // 270 deg:
-            // xNew = yOld
-            // yNew = -xOld
-
-            int oldX = x;
-
-            switch (angle)
-            {
-                case 90:
-                    x = -z;
-                    z = oldX;
-                    break;
-                case 180:
-                    x *= -1;
-                    z *= -1;
-                    break;
-                case 270:
-                    x = z;
-                    z = -oldX;
-                    break;
-            }
-
-            x += originx / 2;
-            z += originz / 2;
-        }
+        
 
 
 
@@ -338,6 +212,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ResendBlockHighlights();
             }
         }
+
 
         private void HandleMirrorCommand(BlockFacing face, CmdArgs args)
         {
