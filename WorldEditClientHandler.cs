@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -65,7 +66,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!allow)
             {
-                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected. To accept, set allowSaveFilesFromServer to true in clientsettings.json (be aware of potential security implications!).");
+                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected for safety reasons. To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!");
                 return;
             }
 
@@ -171,7 +172,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 toolOptionsDialog.Recompose();
                 toolOptionsDialog.UnfocusElements();
             }
-            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled && toolBarDialog.IsOpened())
+            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled && toolBarDialog?.IsOpened() == true)
             {
                 OpenToolOptionsDialog("" + ownWorkspace.ToolName);
             }
@@ -270,26 +271,25 @@ namespace Vintagestory.ServerMods.WorldEdit
             switch (elementCode)
             {
                 case "timeofday":
-                    float time = 0f;
-                    float.TryParse(newValue, out time);
+                    float time = newValue.ToFloat(0);
                     time = time / 24 * capi.World.Calendar.HoursPerDay;
                     capi.SendChatMessage("/time set " + time + ":00");
                     break;
                 case "foglevel":
                     amb.FogDensity.Weight = 1;
-                    amb.FogDensity.Value = float.Parse(newValue) / 2000f;
+                    amb.FogDensity.Value = newValue.ToFloat(0) / 2000f;
                     SendGlobalAmbient();
                     break;
 
                 case "flatfoglevel":
                     amb.FlatFogDensity.Weight = 1;
-                    amb.FlatFogDensity.Value = float.Parse(newValue) / 250f;
+                    amb.FlatFogDensity.Value = newValue.ToFloat() / 250f;
                     SendGlobalAmbient();
                     break;
 
                 case "flatfoglevelypos":
                     amb.FlatFogYPos.Weight = 1;
-                    amb.FlatFogYPos.Value = float.Parse(newValue);
+                    amb.FlatFogYPos.Value = newValue.ToFloat();
                     SendGlobalAmbient();
                     break;
 
@@ -298,39 +298,39 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "foggreen":
                 case "fogblue":
                     float[] color = amb.FogColor.Value;
-                    if (elementCode == "fogred") color[0] = int.Parse(newValue) / 255f;
-                    if (elementCode == "foggreen") color[1] = int.Parse(newValue) / 255f;
-                    if (elementCode == "fogblue") color[2] = int.Parse(newValue) / 255f;
+                    if (elementCode == "fogred") color[0] = newValue.ToInt() / 255f;
+                    if (elementCode == "foggreen") color[1] = newValue.ToInt() / 255f;
+                    if (elementCode == "fogblue") color[2] = newValue.ToInt() / 255f;
 
                     amb.FogColor.Weight = 1;
                     SendGlobalAmbient();
                     break;
                 case "cloudlevel":
 
-                    amb.CloudDensity.Value = float.Parse(newValue) / 100f;
+                    amb.CloudDensity.Value = newValue.ToFloat() / 100f;
                     amb.CloudDensity.Weight = 1;
 
                     SendGlobalAmbient();
                     break;
                 case "cloudypos":
-                    amb.CloudYPos.Value = float.Parse(newValue) / 255f;
+                    amb.CloudYPos.Value = newValue.ToFloat() / 255f;
                     amb.CloudYPos.Weight = 1;
                     SendGlobalAmbient();
                     break;
                 case "cloudbrightness":
-                    amb.CloudBrightness.Value = float.Parse(newValue) / 100f;
+                    amb.CloudBrightness.Value = newValue.ToFloat() / 100f;
                     amb.CloudBrightness.Weight = 1;
                     SendGlobalAmbient();
                     break;
                 case "movespeed":
-                    capi.World.Player.WorldData.MoveSpeedMultiplier = float.Parse(newValue);
+                    capi.World.Player.WorldData.MoveSpeedMultiplier = newValue.ToFloat();
                     break;
                 case "axislock":
-                    capi.World.Player.WorldData.FreeMovePlaneLock = (EnumFreeMovAxisLock)int.Parse(newValue);
+                    capi.World.Player.WorldData.FreeMovePlaneLock = (EnumFreeMovAxisLock)newValue.ToInt();
                     clientChannel.SendPacket(new ChangePlayerModePacket() { axisLock = capi.World.Player.WorldData.FreeMovePlaneLock });
                     break;
                 case "pickingrange":
-                    capi.World.Player.WorldData.PickingRange = float.Parse(newValue);
+                    capi.World.Player.WorldData.PickingRange = newValue.ToFloat();
                     clientChannel.SendPacket(new ChangePlayerModePacket() { pickingRange = capi.World.Player.WorldData.PickingRange });
                     break;
                 case "liquidselectable":

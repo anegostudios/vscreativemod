@@ -46,6 +46,10 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="0Harmony, Version=2.0.0.8, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lib.Harmony.2.0.0.8\lib\net45\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\Newtonsoft.Json.dll</HintPath>
@@ -66,7 +70,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BlockEntity\BlockEntityCommand.cs" />
+    <Compile Include="Block\BlockCommand.cs" />
     <Compile Include="Core.cs" />
+    <Compile Include="Gui\GuiDialogBlockEntityCommand.cs" />
     <Compile Include="Item\ItemMagicWand.cs" />
     <Compile Include="ShapeToPositionList.cs" />
     <Compile Include="Enums.cs" />
@@ -95,11 +102,19 @@
     <Compile Include="WorldEditSelectionTools.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Cairo\Cairo.csproj">
+      <Project>{364577DB-9728-4951-AC2C-EDF7A6FCC09D}</Project>
+      <Name>Cairo</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\VintagestoryApi\VintagestoryAPI.csproj">
       <Project>{a3582245-a1d1-4135-ba90-8efd7830da83}</Project>
       <Name>VintagestoryAPI</Name>
       <Private>False</Private>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

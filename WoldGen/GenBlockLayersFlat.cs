@@ -41,7 +41,17 @@ namespace Vintagestory.ServerMods
 
         private void OnMapRegionGen(IMapRegion mapRegion, int regionX, int regionZ)
         {
-            mapRegion.ClimateMap = new API.IntMap()
+            mapRegion.ClimateMap = new API.IntDataMap2D()
+            {
+                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
+                Size = 2
+            };
+            mapRegion.ForestMap = new API.IntDataMap2D()
+            {
+                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
+                Size = 2
+            };
+            mapRegion.ShrubMap = new API.IntDataMap2D()
             {
                 Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
                 Size = 2

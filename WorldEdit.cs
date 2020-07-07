@@ -68,7 +68,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             sapi.Permissions.RegisterPrivilege("worldedit", "Ability to use world edit tools");
 
-            sapi.RegisterCommand("we", "World edit tools", "[ms|me|mc|mex|clear|mclear|mfill|imp|impr|blu|brs|brm|ers|range|tool|on|off|undo|redo|sovp|hp|sp|block|...]", CmdEditServer, "worldedit");
+            sapi.RegisterCommand("we", "World edit tools", "[ms|me|mc|mex|clear|mclear|mfill|imp|impr|blu|brs|brm|ers|range|tool|on|off|undo|redo|sovp|block|...]", CmdEditServer, "worldedit");
 
             sapi.Event.PlayerJoin += OnPlayerJoin;
 
@@ -709,10 +709,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
 
 
-               /* case "mr":
-                    HandleRotateCommand(args.PopInt(), args.PopSingle());
+                case "mr":
+                    HandleRotateCommand(args.PopInt(), args.PopWord());
                     break;
-                    */
+                    
 
                 case "mmirn":
                     HandleMirrorCommand(BlockFacing.NORTH, args);
