@@ -44,7 +44,6 @@ using Vintagestory.API.Config;
     NetworkVersion = GameVersion.NetworkVersion,
     Description = "Adds extensive world editing capabilities through commands, a graphical user interface and super flat world generation",
     Authors = new[] { "Tyron" },
-    RequiredOnClient = true,
     WorldConfig = @"
     {
 	    playstyles: [
@@ -71,4 +70,4 @@ using Vintagestory.API.Config;
 "
 )]
 
- [assembly: ModDependency("game")]
+[assembly: ModDependency("game")]

@@ -66,7 +66,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!allow)
             {
-                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected. To accept, set allowSaveFilesFromServer to true in clientsettings.json (be aware of potential security implications!).");
+                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected for safety reasons. To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!");
                 return;
             }
 
@@ -172,7 +172,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 toolOptionsDialog.Recompose();
                 toolOptionsDialog.UnfocusElements();
             }
-            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled && toolBarDialog.IsOpened())
+            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled && toolBarDialog?.IsOpened() == true)
             {
                 OpenToolOptionsDialog("" + ownWorkspace.ToolName);
             }
