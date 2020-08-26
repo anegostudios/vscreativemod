@@ -138,6 +138,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             SendPlayerWorkSpace(fromPlayer.PlayerUID);
         }
 
+        public WorldEditWorkspace GetWorkSpace(string playerUid)
+        {
+            WorldEditWorkspace space = null;
+            workspaces.TryGetValue(playerUid, out space);
+            return space;
+        }
+
         public void SendPlayerWorkSpace(string playerUID)
         {
             serverChannel.SendPacket(workspaces[playerUID], (IServerPlayer)sapi.World.PlayerByUid(playerUID));
@@ -169,7 +176,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             WorldEditWorkspace workspace = GetOrCreateWorkSpace(player);
 
-            IBlockAccessorRevertable revertableBlockAccess = sapi.WorldManager.GetBlockAccessorRevertable(true, true);
+            IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
 
             // Initialize all tools once to build up the workspace for the client gui tool options
             foreach (var val in ToolRegistry.ToolTypes)
@@ -225,7 +232,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     while (count-- > 0)
                     {
-                        IBlockAccessorRevertable revertableBlockAccess = sapi.WorldManager.GetBlockAccessorRevertable(true, true);
+                        IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
                         WorldEditWorkspace workspace = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
                         workspace.FromBytes(reader);
                         if (workspace.PlayerUID == null)
@@ -271,7 +278,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             else
             {
-                IBlockAccessorRevertable revertableBlockAccess = sapi.WorldManager.GetBlockAccessorRevertable(true, true);
+                IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
                 workspaces[playeruid] = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
                 workspaces[playeruid].PlayerUID = playeruid;
                 return workspaces[playeruid];
@@ -489,11 +496,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 case "t":
                     string toolname = null;
-                    
-                    if (args.Length > 0)
-                    {
-                        string suppliedToolname = args.PopAll();
+                    string suppliedToolname = args.PopAll();
 
+                    if (suppliedToolname.Length > 0)
+                    {
                         int toolId;
                         if (int.TryParse(suppliedToolname, NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out toolId))
                         {
@@ -522,7 +528,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (toolname == null)
                     {
-                        Bad("No such tool '"+toolname+"' registered");
+                        Bad("No such tool '"+ suppliedToolname + "' registered");
                         break;
                     }
 
@@ -1054,7 +1060,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void BlockLineup(BlockPos pos, CmdArgs args)
         {
-            List<Block> blocks = sapi.World.Blocks;
+            IList<Block> blocks = sapi.World.Blocks;
 
             bool all = args.PopWord() == "all"; 
 

@@ -87,7 +87,7 @@ namespace Vintagestory.ServerMods
 
             this.blockIds = blockIds.ToArray();
 
-            api.WorldManager.SetSealLevel(blockIds.Count);
+            api.WorldManager.SetSeaLevel(blockIds.Count);
         }
 
         private void OnChunkColumnGeneration(IServerChunk[] chunks, int chunkX, int chunkZ, ITreeAttribute chunkGenParams = null)

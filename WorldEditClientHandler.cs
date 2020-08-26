@@ -114,10 +114,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 75);
             
-                // Limit to 50kb
+                // Limit the file size
                 if (bytes / 1024 > schematicMaxUploadSizeKb)
                 {
-                    capi.TriggerIngameError(this, "schematictoolarge", Lang.Get("Importing of schematics above {0} KB disabled.", schematicMaxUploadSizeKb));
+                    capi.TriggerIngameError(this, "schematictoolarge", Lang.Get("Importing of schematics above {0} KB disabled, adjust config schematicMaxUploadSizeKb to change.", schematicMaxUploadSizeKb));
                     return;
                 }
 

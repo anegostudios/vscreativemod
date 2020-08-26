@@ -92,9 +92,9 @@
     <Compile Include="Tool\MoveTool.cs" />
     <Compile Include="Tool\SelectTool.cs" />
     <Compile Include="Tool\ToolBase.cs" />
-    <Compile Include="WoldGen\CreativeWorldGenConfig.cs" />
-    <Compile Include="WoldGen\GenBlockLayersFlat.cs" />
-    <Compile Include="WoldGen\GenLight.cs" />
+    <Compile Include="WorldGen\CreativeWorldGenConfig.cs" />
+    <Compile Include="WorldGen\GenBlockLayersFlat.cs" />
+    <Compile Include="WorldGen\GenLight.cs" />
     <Compile Include="Workspace.cs" />
     <Compile Include="WorldEdit.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

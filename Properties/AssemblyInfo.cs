@@ -59,7 +59,8 @@ using Vintagestory.API.Config;
 				    hoursPerDay: ""2400"",
 					cloudypos: ""0.5"",
 					temporalStability: ""false"",
-                    temporalStorms: ""off""
+                    temporalStorms: ""off"",
+					snowAccum: ""false""
 			    }
 		    }
 	    ],

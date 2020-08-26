@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
@@ -51,7 +52,10 @@ namespace Vintagestory.ServerMods
 
         private void Event_PlayerCreate(IServerPlayer byPlayer)
         {
-            if (sapi.WorldManager.SaveGame.PlayStyle == "creativebuilding")
+            ITreeAttribute worldConfig = sapi.WorldManager.SaveGame.WorldConfiguration;
+            string mode = worldConfig.GetString("gameMode");
+
+            if (mode == "creative")
             {
                 byPlayer.WorldData.CurrentGameMode = EnumGameMode.Creative;
                 byPlayer.WorldData.PickingRange = 100;
@@ -63,7 +67,6 @@ namespace Vintagestory.ServerMods
         {
             if (sapi.WorldManager.SaveGame.PlayStyle == "creativebuilding")
             {
-                //sapi.WorldManager.SaveGame.AllowCreativeMode = true;
                 sapi.WorldManager.SaveGame.EntitySpawning = false;
             }
         }
