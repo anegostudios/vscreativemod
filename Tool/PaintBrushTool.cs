@@ -390,12 +390,14 @@ namespace Vintagestory.ServerMods.WorldEdit
         public bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
             if (BrushDim1 <= 0) return false;
 
-            Block selectedBlock = blockSel.DidOffset ? blockAccessRev.GetBlock(blockSel.Position.AddCopy(blockSel.Face.GetOpposite())) : blockAccessRev.GetBlock(oldBlockId);
+            Block selectedBlock = blockSel.DidOffset ? blockAccessRev.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : blockAccessRev.GetBlock(blockSel.Position);
 
             int selectedBlockId = selectedBlock.BlockId;
-            if (this is EraserTool) selectedBlockId = oldBlockId;
 
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            if (oldBlockId >= 0)
+            {
+                worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            }
             
 
 

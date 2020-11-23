@@ -20,10 +20,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        public override bool ApplyToolBreak(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos)
+        public override bool ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
         {
-            block = blockAccessRev.GetBlock(0);
-            return PerformBrushAction(worldEdit, block, oldBlockId, blockSel, targetPos, null);
+            handling = EnumHandling.PreventDefault;
+            oldblock = blockAccessRev.GetBlock(0);
+            return PerformBrushAction(worldEdit, oldblock, -1, blockSel, targetPos, null);
         }
         
         

@@ -65,22 +65,23 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
+            handling = EnumHandling.PreventDefault;
             startPos = blockSel.Position.Copy();
             worldEdit.Good("Line Tool start position set");
 
-            int blockId = blockAccessRev.GetBlockId(blockSel.Position);
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, oldBlockId);
-            blockAccessRev.Commit();
+            //int blockId = blockAccessRev.GetBlockId(blockSel.Position);
+            //worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            //blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, oldBlockId);
+            //blockAccessRev.Commit();
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             if (startPos == null) return;
 
-            BlockPos destPos = blockSel.Position.AddCopy(blockSel.Face.GetOpposite());
+            BlockPos destPos = blockSel.Position.AddCopy(blockSel.Face.Opposite);
 
             Block block = blockAccessRev.GetBlock(blockSel.Position);
             if (PlaceMode) block = blockAccessRev.GetBlock(0);

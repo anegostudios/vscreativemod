@@ -162,7 +162,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         }
 
-        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             
         }

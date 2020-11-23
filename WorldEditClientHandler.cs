@@ -177,7 +177,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 OpenToolOptionsDialog("" + ownWorkspace.ToolName);
             }
 
-
             isComposing = false;
         }
 
@@ -194,6 +193,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void TriggerWorldEditDialog()
         {
+            if (capi.World.Player.WorldData.CurrentGameMode != EnumGameMode.Creative) return;
+
             try
             {
                 if (toolBarDialog == null || !toolBarDialog.IsOpened())
@@ -337,7 +338,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     capi.World.ForceLiquidSelectable = newValue == "1" || newValue == "true";
                     break;
                 case "tooloffsetmode":
-                    int num = 0;
+                    int num;
                     int.TryParse(newValue, out num);
                     ownWorkspace.ToolOffsetMode = (EnumToolOffsetMode)num;
                     capi.SendChatMessage("/we tom " + num);

@@ -18,9 +18,9 @@ namespace Vintagestory.GameContent
 
         GuiDialogBlockEntityCommand clientDialog;
 
-        public override void FromTreeAtributes(ITreeAttribute tree, IWorldAccessor worldAccessForResolve)
+        public override void FromTreeAttributes(ITreeAttribute tree, IWorldAccessor worldAccessForResolve)
         {
-            base.FromTreeAtributes(tree, worldAccessForResolve);
+            base.FromTreeAttributes(tree, worldAccessForResolve);
 
             Commands = tree.GetString("commands");
         }

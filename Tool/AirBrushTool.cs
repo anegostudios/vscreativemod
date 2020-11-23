@@ -156,9 +156,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
-            OnApply(worldEdit, oldBlockId, blockSel, null, true);
+            handling = EnumHandling.PreventDefault;
+            OnApply(worldEdit, -1, blockSel, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
@@ -179,8 +180,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int quantityBlocks = (int)(GameMath.PI * radSq);
             if (!worldEdit.MayPlace(block, (int)q)) return;
 
-
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            if (oldBlockId >= 0) worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             lcgRand.SetWorldSeed(rand.Next());
             lcgRand.InitPositionSeed(blockSel.Position.X / blockAccessRev.ChunkSize, blockSel.Position.Z / blockAccessRev.ChunkSize);
 
@@ -251,7 +251,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                 
             }
 
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+            if (oldBlockId >= 0)
+            {
+                blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+            }
+
             blockAccessRev.Commit();
 
 

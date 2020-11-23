@@ -74,9 +74,10 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
         
 
-        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
-            ApplyTool(worldEdit, blockSel.Position, oldBlockId, blockSel.Face, null, true);
+            handling = EnumHandling.PreventDefault;
+            ApplyTool(worldEdit, blockSel.Position, -1, blockSel.Face, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
@@ -89,7 +90,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             mapheight = worldEdit.sapi.WorldManager.MapSizeY;
 
             Block block = blockAccessRev.GetBlock(pos);
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
+            if (oldBlockId >= 0)
+            {
+                worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
+            } else
+            {
+                block = worldEdit.sapi.World.GetBlock(0);
+            }
 
             FloodFillAt(worldEdit, block, withItemstack, pos.X, pos.Y, pos.Z);
 

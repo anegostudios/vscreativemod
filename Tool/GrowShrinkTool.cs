@@ -36,9 +36,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return new Vec3i((int)BrushRadius, (int)BrushRadius, (int)BrushRadius); }
         }
 
-        public override void OnBreak(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel)
+        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
-            GrowShrink(worldEdit, oldBlockId, blockSel, null, true);
+            handling = EnumHandling.PreventDefault;
+            GrowShrink(worldEdit, -1, blockSel, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
@@ -55,12 +56,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             Block blockToPlace = blockAccessRev.GetBlock(blockSel.Position);
             if (shrink) blockToPlace = blockAccessRev.GetBlock(0);
 
-            if (!shrink)
-            {
-                worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-            }
-
-            int selectedBlockID = blockAccessRev.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.GetOpposite()));
+            int selectedBlockID = blockAccessRev.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.Opposite));
 
             int radInt = (int)Math.Ceiling(BrushRadius);
             float radSq = BrushRadius * BrushRadius;
@@ -108,7 +104,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                 blockAccessRev.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+            if (oldBlockId >= 0)
+            {
+                blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+            }
             blockAccessRev.Commit();
 
 

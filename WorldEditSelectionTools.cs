@@ -91,7 +91,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             BlockSchematic schematic = CopyArea(workspace.StartMarker, workspace.EndMarker);
             schematic.TransformWhilePacked(sapi.World, origin, angle, null);
-            FillArea(0, workspace.StartMarker, workspace.EndMarker);
+            FillArea(null, workspace.StartMarker, workspace.EndMarker);
 
             PasteBlockData(schematic, mid, origin);
 
@@ -182,7 +182,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 val.Value.SetInt("posy", val.Key.Y);
                 val.Value.SetInt("posz", val.Key.Z);
 
-                be?.FromTreeAtributes(val.Value, workspace.world);
+                be?.FromTreeAttributes(val.Value, workspace.world);
             }
 
             if (repeats > 1) Good("Marked area repeated " + repeats + ((repeats > 1) ? " times" : " time"));
@@ -480,7 +480,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     val.Value.SetInt("posy", val.Key.Y);
                     val.Value.SetInt("posz", val.Key.Z);
 
-                    be.FromTreeAtributes(val.Value, this.sapi.World);
+                    be.FromTreeAttributes(val.Value, this.sapi.World);
                 }
             }
 
@@ -488,7 +488,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private int FillArea(int blockId, BlockPos start, BlockPos end)
+        private int FillArea(ItemStack blockStack, BlockPos start, BlockPos end)
         {
             int updated = 0;
 
@@ -501,12 +501,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             int dz = finalPos.Z - startPos.Z;
 
             int quantityBlocks = dx * dy * dz;
-            Block block = sapi.World.Blocks[blockId];
-            if (!MayPlace(block, quantityBlocks)) return 0;
+            int blockId = 0;
+            Block block = blockStack?.Block;
+
+            if (block != null) blockId = block.Id;
+            if (block != null && !MayPlace(block, quantityBlocks)) return 0;
 
             if (quantityBlocks > 1000)
             {
-                Good((blockId == 0 ? "Clearing" : "Placing") + " " + (dx * dy * dz) + " blocks...");
+                Good((block == null ? "Clearing" : "Placing") + " " + (dx * dy * dz) + " blocks...");
             }
 
             while (curPos.X < finalPos.X)
@@ -518,7 +521,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     curPos.Z = startPos.Z;
                     while (curPos.Z < finalPos.Z)
                     {
-                        workspace.revertableBlockAccess.SetBlock(blockId, curPos);
+                        workspace.revertableBlockAccess.SetBlock(blockId, curPos, blockStack);
                         curPos.Z++;
                         updated++;
                     }

@@ -1,0 +1,6 @@
+C:\Users\tyron\Documents\vintagestory\game\bin\Debug\Mods\VSCreativeMod.dll
+C:\Users\tyron\Documents\vintagestory\game\bin\Debug\Mods\VSCreativeMod.pdb
+C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug\VSCreativeMod.csprojAssemblyReference.cache
+C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug\VSCreativeMod.csproj.CoreCompileInputs.cache
+C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug\VSCreativeMod.dll
+C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug\VSCreativeMod.pdb
