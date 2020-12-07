@@ -27,7 +27,7 @@ namespace Vintagestory.ServerMods
 
         public override void StartPre(ICoreAPI api)
         {
-            api.Assets.AddPathOrigin("game", Path.Combine(GamePaths.AssetsPath, "creative"));
+            api.Assets.AddModOrigin("game", Path.Combine(GamePaths.AssetsPath, "creative"));
         }
 
         public override void Start(ICoreAPI api)
