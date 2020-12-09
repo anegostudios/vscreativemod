@@ -1,6 +1,0 @@
-C:\Users\tyron\Documents\vintagestory\game\bin\Debug\Mods\VSCreativeMod.dll
-C:\Users\tyron\Documents\vintagestory\game\bin\Debug\Mods\VSCreativeMod.pdb
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug + Flatworld\VSCreativeMod.csprojAssemblyReference.cache
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug + Flatworld\VSCreativeMod.csproj.CoreCompileInputs.cache
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug + Flatworld\VSCreativeMod.dll
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Debug + Flatworld\VSCreativeMod.pdb
