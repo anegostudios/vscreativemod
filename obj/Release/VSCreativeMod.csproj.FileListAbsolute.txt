@@ -1,6 +1,6 @@
-C:\Users\tyron\Documents\vintagestory\game\bin\Release\Mods\VSCreativeMod.dll
-C:\Users\tyron\Documents\vintagestory\game\bin\Release\Mods\VSCreativeMod.pdb
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Release\VSCreativeMod.csprojAssemblyReference.cache
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Release\VSCreativeMod.csproj.CoreCompileInputs.cache
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Release\VSCreativeMod.dll
-C:\Users\tyron\Documents\vintagestory\game\VSCreativeMod\obj\Release\VSCreativeMod.pdb
+/var/lib/jenkins/workspace/vintagestory/bin/Release/Mods/VSCreativeMod.dll
+/var/lib/jenkins/workspace/vintagestory/bin/Release/Mods/VSCreativeMod.pdb
+/var/lib/jenkins/workspace/vintagestory/VSCreativeMod/obj/Release/VSCreativeMod.csprojResolveAssemblyReference.cache
+/var/lib/jenkins/workspace/vintagestory/VSCreativeMod/obj/Release/VSCreativeMod.csproj.CoreCompileInputs.cache
+/var/lib/jenkins/workspace/vintagestory/VSCreativeMod/obj/Release/VSCreativeMod.dll
+/var/lib/jenkins/workspace/vintagestory/VSCreativeMod/obj/Release/VSCreativeMod.pdb
