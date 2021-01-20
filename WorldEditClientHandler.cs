@@ -269,6 +269,10 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             AmbientModifier amb = capi.Ambient.CurrentModifiers["serverambient"];
 
+            // no longer used
+            amb.CloudBrightness.Weight = 0;
+            amb.CloudDensity.Weight = 0;
+
             switch (elementCode)
             {
                 case "timeofday":
@@ -306,22 +310,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                     amb.FogColor.Weight = 1;
                     SendGlobalAmbient();
                     break;
-                case "cloudlevel":
-
-                    amb.CloudDensity.Value = newValue.ToFloat() / 100f;
-                    amb.CloudDensity.Weight = 1;
-
+                case "precipitation":
+                    capi.SendChatMessage("/weather setprecip " + newValue.ToFloat()/100f);
                     SendGlobalAmbient();
+
                     break;
                 case "cloudypos":
                     amb.CloudYPos.Value = newValue.ToFloat() / 255f;
                     amb.CloudYPos.Weight = 1;
                     SendGlobalAmbient();
                     break;
-                case "cloudbrightness":
-                    amb.CloudBrightness.Value = newValue.ToFloat() / 100f;
-                    amb.CloudBrightness.Weight = 1;
-                    SendGlobalAmbient();
+                case "weatherpattern":
+                    capi.SendChatMessage("/weather seti " + newValue);
                     break;
                 case "movespeed":
                     capi.World.Player.WorldData.MoveSpeedMultiplier = newValue.ToFloat();
@@ -356,7 +356,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     clientChannel.SendPacket(new ChangePlayerModePacket() { fly = fly, noclip = noclip });
                     break;
                 case "overrideambient":
-                    SendGlobalAmbient((newValue == "1" || newValue == "true"));
+                    bool on = (newValue == "1" || newValue == "true");
+                    SendGlobalAmbient(on);
 
                     break;
             }
@@ -383,6 +384,17 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.SendChatMessage("/setambient " + jsoncode);
 
             if (!beforeAmbientOverride) settingsDialog.ReloadValues();
+            
+
+            if (!enable && beforeAmbientOverride) capi.SendChatMessage("/weather setprecip auto");
+            if (enable && !beforeAmbientOverride)
+            {
+                capi.SendChatMessage("/weather acp 0");
+            }
+            if (!enable && beforeAmbientOverride) { 
+                capi.SendChatMessage("/weather acp 1");
+            }
+
             beforeAmbientOverride = enable;
         }
 

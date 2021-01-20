@@ -244,6 +244,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockPos pos = new BlockPos();
             Block block;
 
+            Dictionary<BlockPos, ITreeAttribute> blockEntityData = new Dictionary<BlockPos, ITreeAttribute>();
+
             while (curPos.X < endPos.X)
             {
                 curPos.Y = startPos.Y;
@@ -271,6 +273,15 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         pos.Set(mX + offset.X, mY + offset.Y, mZ + offset.Z);
 
+                        BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(curPos);
+                        if (be != null)
+                        {
+                            TreeAttribute tree = new TreeAttribute();
+                            be.ToTreeAttributes(tree);
+                            blockEntityData[pos.Copy()] = tree;
+                        }
+
+
                         workspace.revertableBlockAccess.SetBlock(block.BlockId, pos);
 
                         curPos.Z++;
@@ -282,6 +293,29 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             workspace.revertableBlockAccess.Commit();
             Good("Marked area mirrored " + dir);
+
+            // restore block entity data
+            foreach (var val in blockEntityData)
+            {
+                BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(val.Key);
+                if (be != null)
+                {
+                    ITreeAttribute tree = val.Value;
+
+                    tree.SetInt("posx", val.Key.X);
+                    tree.SetInt("posy", val.Key.Y);
+                    tree.SetInt("posz", val.Key.Z);
+
+                    if (be is IBlockEntityRotatable)
+                    {
+                        (be as IBlockEntityRotatable).OnTransformed(tree, 0, dir.Axis);
+                    }
+
+                    be.FromTreeAttributes(tree, this.sapi.World);
+
+                    
+                }
+            }
 
             if (selectNewArea)
             {

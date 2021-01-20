@@ -78,7 +78,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         if (blockAtPos.Replaceable >= 6000) continue;
                         if (GrowShrinkMode == EnumGrowShrinkMode.SelectedBlock && blockAtPos.BlockId != selectedBlockID) continue;
 
-                        for (int i = 0; i < BlockFacing.ALLFACES.Length; i++)
+                        for (int i = 0; i < BlockFacing.NumberOfFaces; i++)
                         {
                             ddpos = dpos.AddCopy(BlockFacing.ALLFACES[i]);
                             if (blockAccessRev.GetBlock(ddpos).Replaceable >= 6000)

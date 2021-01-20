@@ -205,7 +205,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         testblock = blockAccessRev.GetBlock(dpos);
                         if (testblock.Replaceable >= 6000) continue;
 
-                        for (int i = 0; i < BlockFacing.ALLFACES.Length; i++)
+                        for (int i = 0; i < BlockFacing.NumberOfFaces; i++)
                         {
                             if (Apply == EnumAirBrushApply.SelectedFace && BlockFacing.ALLFACES[i] != blockSel.Face) continue;
 
