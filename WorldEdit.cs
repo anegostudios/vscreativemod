@@ -1246,6 +1246,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.revertableBlockAccess.Commit();
 
             blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos);
+            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos, true);
         }
 
         private void ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
@@ -1313,7 +1314,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return false;
                 }
 
-                if (quantityBlocks > 1000 && block.BlockMaterial == EnumBlockMaterial.Plant)
+                ItemStack stack = new ItemStack(block);
+                if (quantityBlocks > 1000 && block.GetBlockMaterial(sapi.World.BlockAccessor, null, stack) == EnumBlockMaterial.Plant)
                 {
                     Bad("Operation rejected. Server overload protection is on. Might kill the server when placing that many plants (might cause massive neighbour block updates if one plant is broken).");
                     return false;

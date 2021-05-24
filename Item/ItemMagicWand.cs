@@ -35,7 +35,6 @@ namespace Vintagestory.GameContent
             }
 
             handling = EnumHandHandling.PreventDefaultAction;
-            base.OnHeldAttackStart(slot, byEntity, blockSel, entitySel, ref handling);
         }
 
         public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
@@ -50,7 +49,6 @@ namespace Vintagestory.GameContent
             }
 
             handling = EnumHandHandling.PreventDefaultAction;
-            base.OnHeldInteractStart(slot, byEntity, blockSel, entitySel, firstEvent, ref handling);
         }
 
         public override bool OnHeldAttackStep(float secondsPassed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSelection, EntitySelection entitySel)

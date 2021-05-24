@@ -19,7 +19,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public bool CheckEnclosure
         {
             get { return workspace.IntValues["std.floodFillCheckEnclosure"] > 0; }
-            set { workspace.IntValues["std.floodFillCheckEnclosure"] = value ? 1: 0; }
+            set { workspace.IntValues["std.floodFillCheckEnclosure"] = value ? 1 : 0; }
         }
 
         public int Mode
@@ -28,10 +28,17 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.floodFillMode"] = value; }
         }
 
+        public int ReplaceableLevel
+        {
+            get { return workspace.IntValues["std.floodFillReplaceableLevel"]; }
+            set { workspace.IntValues["std.floodFillReplaceableLevel"] = value; }
+        }
+
 
         public FloodFillTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
             if (!workspace.IntValues.ContainsKey("std.floodFillSearchRadius")) SearchRadius = 32;
+            if (!workspace.IntValues.ContainsKey("std.floodFillReplaceableLevel")) ReplaceableLevel = 6000;
             if (!workspace.IntValues.ContainsKey("std.checkEnclosure")) CheckEnclosure = true; ;
             if (!workspace.IntValues.ContainsKey("std.mode")) Mode = 2;
         }
@@ -47,6 +54,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                         SearchRadius = rad;
 
                         worldEdit.Good(workspace.ToolName + " search radius " + SearchRadius + " set.");
+                        return true;
+                    }
+
+                case "trl":
+                    {
+                        int rl = (int)args.PopInt(6000);
+                        ReplaceableLevel = rl;
+
+                        worldEdit.Good(workspace.ToolName + " replaceable level " + rl + " set.");
                         return true;
                     }
 
@@ -122,6 +138,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             float radius = SearchRadius;
 
+            int repl = ReplaceableLevel;
+
             BlockFacing[] faces = Mode == 2 ? BlockFacing.HORIZONTALS : BlockFacing.ALLFACES;
             BlockPos curPos = new BlockPos();
             
@@ -138,7 +156,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (inBounds)
                     {
-                        if (block.Replaceable >= 6000 && !fillablePositions.Contains(curPos)) 
+                        if (block.Replaceable >= repl && !fillablePositions.Contains(curPos)) 
                         {
                             bfsQueue.Enqueue(new Vec4i(curPos.X, curPos.Y, curPos.Z, bpos.W + 1));
                             fillablePositions.Add(curPos.Copy());

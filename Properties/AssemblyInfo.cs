@@ -49,6 +49,7 @@ using Vintagestory.API.Config;
 	    playstyles: [
 		    {
 			    code: ""creativebuilding"",
+				playListCode: ""creative"",
                 langcode: ""creativebuilding"",
                 listOrder: 10,
 			    mods: [""game"", ""creative""],

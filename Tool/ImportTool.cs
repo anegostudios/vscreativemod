@@ -327,6 +327,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetStagedBlockId(blockSel.Position));
             blockAccessRev.Commit();
             blockData.PlaceEntitiesAndBlockEntities(blockAccessRev, worldEdit.sapi.World, originPos);
+            blockData.PlaceDecors(blockAccessRev, originPos, true);
+
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);
             worldEdit.ResendBlockHighlights();

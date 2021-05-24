@@ -88,7 +88,11 @@ namespace Vintagestory.GameContent
                 string[] commands = Commands.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var command in commands)
                 {
-                    (Api as ICoreServerAPI).InjectConsole(command);
+                    string cmd = command
+                        .Replace("{pos}", "="+Pos.X+" ="+Pos.Y+"="+Pos.Z+"")
+                    ;
+
+                    (Api as ICoreServerAPI).InjectConsole(cmd);
                 }
 
                 if (commands.Length > 0)
