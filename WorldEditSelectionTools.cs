@@ -312,8 +312,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     be.FromTreeAttributes(tree, this.sapi.World);
-
-                    
                 }
             }
 
