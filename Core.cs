@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Reflection;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -32,6 +33,8 @@ namespace Vintagestory.ServerMods
 
         public override void Start(ICoreAPI api)
         {
+            GameVersion.EnsureEqualVersionOrKillExecutable(api, System.Diagnostics.FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion, GameVersion.OverallVersion, "VSCreativeMod");
+
             base.Start(api);
 
             api.RegisterItemClass("ItemMagicWand", typeof(ItemMagicWand));
