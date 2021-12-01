@@ -90,6 +90,7 @@ namespace Vintagestory.GameContent
                 {
                     string cmd = command
                         .Replace("{pos}", "="+Pos.X+" ="+Pos.Y+"="+Pos.Z+"")
+                        .Replace("{plr}", byPlayer.PlayerName)
                     ;
 
                     (Api as ICoreServerAPI).InjectConsole(cmd);

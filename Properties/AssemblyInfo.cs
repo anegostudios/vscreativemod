@@ -42,9 +42,10 @@ using Vintagestory.API.Config;
 [assembly: ModInfo( "Creative Mode", "creative",
     Version = GameVersion.ShortGameVersion,
     NetworkVersion = GameVersion.NetworkVersion,
-    Description = "Adds extensive world editing capabilities through commands, a graphical user interface and super flat world generation",
-    Authors = new[] { "Tyron" },
-    WorldConfig = @"
+    Description = "World editing, worldedit GUI and super flat world generation",
+	IconPath = "game/textures/gui/modicon.png",
+	Authors = new[] { "Tyron" },
+	WorldConfig = @"
     {
 	    playstyles: [
 		    {
