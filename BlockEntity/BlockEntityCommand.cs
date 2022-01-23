@@ -93,7 +93,16 @@ namespace Vintagestory.GameContent
                         .Replace("{plr}", byPlayer.PlayerName)
                     ;
 
-                    (Api as ICoreServerAPI).InjectConsole(cmd);
+                    if (command.Contains("{plr}"))
+                    {
+                        (Api as ICoreServerAPI).HandleCommand(byPlayer as IServerPlayer, cmd);
+                    } else
+                    {
+                        (Api as ICoreServerAPI).InjectConsole(cmd);
+                    }
+                    
+
+                    
                 }
 
                 if (commands.Length > 0)
