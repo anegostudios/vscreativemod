@@ -328,6 +328,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             blockAccessRev.Commit();
             blockData.PlaceEntitiesAndBlockEntities(blockAccessRev, worldEdit.sapi.World, originPos);
             blockData.PlaceDecors(blockAccessRev, originPos, true);
+            blockAccessRev.CommitBlockEntityData();
 
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);

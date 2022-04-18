@@ -1247,6 +1247,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos);
             rotated.PlaceDecors(workspace.revertableBlockAccess, originPos, true);
+
+            workspace.revertableBlockAccess.CommitBlockEntityData();
         }
 
         private void ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
