@@ -112,7 +112,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (ownWorkspace != null && ownWorkspace.ToolsEnabled && ownWorkspace.ToolName == "Import")
             {
 
-                int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 75);
+                int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 150);
             
                 // Limit the file size
                 if (bytes / 1024 > schematicMaxUploadSizeKb)
@@ -316,9 +316,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     break;
                 case "cloudypos":
-                    amb.CloudYPos.Value = newValue.ToFloat() / 255f;
-                    amb.CloudYPos.Weight = 1;
-                    SendGlobalAmbient();
+                    capi.SendChatMessage("/weather cloudypos " + newValue.ToFloat()/255f);
                     break;
                 case "weatherpattern":
                     capi.SendChatMessage("/weather seti " + newValue);
@@ -336,6 +334,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
                 case "liquidselectable":
                     capi.World.ForceLiquidSelectable = newValue == "1" || newValue == "true";
+                    break;
+                case "serveroverloadprotection":
+                    capi.SendChatMessage("/we sovp " + newValue);
                     break;
                 case "tooloffsetmode":
                     int num;
@@ -378,7 +379,6 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             amb.CloudBrightness.Weight = newWeight;
             amb.CloudDensity.Weight = newWeight;
-            amb.CloudYPos.Weight = newWeight;
 
             string jsoncode = JsonConvert.SerializeObject(amb);
             capi.SendChatMessage("/setambient " + jsoncode);
@@ -409,7 +409,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "foglevel":
                     return ""+ (int)(amb.FogDensity.Value * 2000);
 
-
                 case "flatfoglevel":
                     return "" + (int)(amb.FlatFogDensity.Value * 250);
 
@@ -425,7 +424,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "cloudlevel":
                     return ""+ (int)(amb.CloudDensity.Value * 100);
                 case "cloudypos":
-                    return "" + (int)(amb.CloudYPos.Value * 255);
+                    return "" + (int)(1 * 255);
                 case "cloudbrightness":
                     return ""+ (int)(amb.CloudBrightness.Value * 100);
                 case "movespeed":
@@ -436,6 +435,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return "" + (float)capi.World.Player.WorldData.PickingRange;
                 case "liquidselectable":
                     return (capi.World.ForceLiquidSelectable ? "1" : "0");
+                case "serveroverloadprotection":
+                    if (ownWorkspace == null) return "1";
+                    return ownWorkspace.serverOverloadProtection ? "1" : "0";
                 case "ambientparticles":
                     return (capi.World.AmbientParticles ? "1" : "0");
                 case "flymode":

@@ -127,7 +127,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     Mode = mode;
                     worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
                     return true;
 
 
@@ -147,7 +147,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     Apply = apply;
                     worldEdit.Good(workspace.ToolName + " apply " + apply + " set.");
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
                     return true;
 
 

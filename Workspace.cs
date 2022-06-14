@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -13,6 +15,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         public bool ToolsEnabled;
 
         public string PlayerUID;
+
+        BlockPos prevStartMarker;
+        BlockPos prevEndMarker;
 
         public BlockPos StartMarker;
         public BlockPos EndMarker;
@@ -26,8 +31,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         internal IBlockAccessorRevertable revertableBlockAccess;
         internal IWorldAccessor world;
-        //internal List<Cuboidi> selectionBoxHistory;
 
+        public bool serverOverloadProtection = true;
         public EnumToolOffsetMode ToolOffsetMode;
 
         public Dictionary<string, float> FloatValues = new Dictionary<string, float>();
@@ -51,6 +56,36 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             this.revertableBlockAccess = blockAccessor;
             this.world = world;
+
+            blockAccessor.OnStoreHistoryState += BlockAccessor_OnStoreHistoryState;
+            blockAccessor.OnRestoreHistoryState += BlockAccessor_OnRestoreHistoryState;
+        }
+
+        private void BlockAccessor_OnRestoreHistoryState(HistoryState obj, int dir)
+        {
+            if (dir > 0)
+            {
+                StartMarker = obj.NewStartMarker?.Copy();
+                EndMarker = obj.NewEndMarker?.Copy();
+            } else
+            {
+                StartMarker = obj.OldStartMarker?.Copy();
+                EndMarker = obj.OldEndMarker?.Copy();
+            }
+            
+            HighlightSelectedArea();
+        }
+
+        private void BlockAccessor_OnStoreHistoryState(HistoryState obj)
+        {
+            obj.OldStartMarker = prevStartMarker?.Copy();
+            obj.OldEndMarker = prevEndMarker?.Copy();
+
+            obj.NewStartMarker = StartMarker?.Copy();
+            obj.NewEndMarker = EndMarker?.Copy();
+
+            prevStartMarker = StartMarker?.Copy();
+            prevEndMarker = EndMarker?.Copy();
         }
 
         public void SetTool(string toolname)
@@ -126,6 +161,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 
             writer.Write((int)ToolOffsetMode);
             writer.Write(DoRelight);
+
+            writer.Write(serverOverloadProtection);
         }
 
         public void FromBytes(BinaryReader reader)
@@ -202,6 +239,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 DoRelight = reader.ReadBoolean();
 
                 revertableBlockAccess.Relight = DoRelight;
+
+                serverOverloadProtection = reader.ReadBoolean();
             }
             catch (Exception) { }
         }
@@ -222,6 +261,43 @@ namespace Vintagestory.ServerMods.WorldEdit
                 Math.Max(StartMarker.Y, EndMarker.Y), 
                 Math.Max(StartMarker.Z, EndMarker.Z)
             );
+        }
+
+        public void ResendBlockHighlights(WorldEdit we)
+        {
+            var player = world.PlayerByUid(PlayerUID);
+            
+            HighlightSelectedArea();
+
+            if (ToolsEnabled)
+            {
+                EnumHighlightBlocksMode mode = EnumHighlightBlocksMode.CenteredToSelectedBlock;
+                if (ToolOffsetMode == EnumToolOffsetMode.Attach) mode = EnumHighlightBlocksMode.AttachedToSelectedBlock;
+                if (ToolInstance != null)
+                {
+                    world.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, ToolInstance.GetBlockHighlights(we), ToolInstance.GetBlockHighlightColors(we), mode, EnumHighlightShape.Arbitrary);
+                }
+            }
+            else
+            {
+                world.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, new List<BlockPos>(), new List<int>());
+            }
+        }
+
+
+
+        public void HighlightSelectedArea()
+        {
+            var player = world.PlayerByUid(PlayerUID);
+
+            if (StartMarker != null && EndMarker != null)
+            {
+                world.HighlightBlocks(player, (int)EnumHighlightSlot.Selection, new List<BlockPos>(new BlockPos[] { StartMarker, EndMarker }), EnumHighlightBlocksMode.Absolute, EnumHighlightShape.Cube);
+            }
+            else
+            {
+                world.HighlightBlocks(player, (int)EnumHighlightSlot.Selection, new List<BlockPos>());
+            }
         }
     }
 }

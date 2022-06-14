@@ -159,7 +159,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     BrushMode = brushMode;
                     worldEdit.Good(workspace.ToolName + " mode " + brushMode + " set.");
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
 
@@ -178,7 +178,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     DepthLimit = depthLimit;
                     worldEdit.Good(workspace.ToolName + " depth limit set to " + depthLimit);
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
                     return true;
 
                 case "ts":
@@ -198,7 +198,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     worldEdit.Good(workspace.ToolName + " shape " + BrushShape + " set.");
                     GenBrush();
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
                     return true;
 
                 case "tsx":
@@ -228,7 +228,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
 
                         return true;
                     }
@@ -269,7 +269,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
                     }
                     return true;
 
@@ -302,7 +302,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         worldEdit.Good(workspace.ToolName + " cutout dimensions " + text + " set.");
 
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
 
                         return true;
                     }
@@ -343,7 +343,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         worldEdit.Good("Cutout " + workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
                     }
                     return true;
 
@@ -358,7 +358,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
                         worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
                     }
                     return true;
 
@@ -373,7 +373,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
                         worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
                         GenBrush();
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
                     }
                     return true;
             }

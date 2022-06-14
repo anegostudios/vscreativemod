@@ -29,7 +29,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         IServerPlayer fromPlayer;
         int groupId;
         WorldEditWorkspace workspace;
-        public bool serverOverloadProtection = true;
+        
         string exportFolderPath;
 
 
@@ -174,7 +174,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 workspace.StartMarker = null;
                 workspace.EndMarker = null;
                 fromPlayer = player;
-                ResendBlockHighlights();
+                workspace.ResendBlockHighlights(this);
             }
         }
 
@@ -206,7 +206,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             else
             {
-                HighlightSelectedArea(workspace, player);
+                workspace.HighlightSelectedArea();
             }
         }
 
@@ -327,7 +327,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 double val = 0;
                 if (double.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out val))
                 {
-                    if (val > 50 && serverOverloadProtection)
+                    if (val > 50 && workspace.serverOverloadProtection)
                     {
                         Bad("Operation rejected. Server overload protection is on. Might kill the server or client to use such a large brush (max is 50).");
 
@@ -461,10 +461,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                             Bad("controlserver privilege required to change server overload protection flag");
                             break;
                         }
-                        serverOverloadProtection = (bool)args.PopBool(true);
+                        workspace.serverOverloadProtection = (bool)args.PopBool(true);
                     }
 
-                    Good("Server overload protection " + (serverOverloadProtection ? "on" : "off"));
+                    Good("Server overload protection " + (workspace.serverOverloadProtection ? "on" : "off"));
                     break;
 
                 case "undo":
@@ -479,14 +479,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "on":
                     Good("World edit tools now enabled");
                     workspace.ToolsEnabled = true;
-                    ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(this);
                     break;
 
 
                 case "off":
                     Good("World edit tools now disabled");
                     workspace.ToolsEnabled = false;
-                    ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(this);
                     break;
 
 
@@ -516,7 +516,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             {
                                 Good("World edit tools now disabled");
                                 workspace.ToolsEnabled = false;
-                                ResendBlockHighlights();
+                                workspace.ResendBlockHighlights(this);
                                 return;
                             }
 
@@ -547,7 +547,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     Good(toolname + " tool selected");
 
                     workspace.ToolsEnabled = true;
-                    ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(this);
                     SendPlayerWorkSpace(fromPlayer.PlayerUID);
                     break;
 
@@ -570,7 +570,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     Good("Set tool offset mode " + mode);
 
-                    ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(this);
                     break;
 
 
@@ -721,7 +721,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     Good("Start and end position marked");
                     EnsureInsideMap(workspace.EndMarker);
-                    HighlightSelectedArea(workspace, fromPlayer);
+                    workspace.HighlightSelectedArea();
                     break;
 
                 case "gn":
@@ -853,7 +853,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     workspace.StartMarker = null;
                     workspace.EndMarker = null;
                     Good("Marked positions cleared");
-                    ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(this);
                     break;
 
                 // Marked info
@@ -957,12 +957,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             MultiblockStructure ms = new MultiblockStructure();
 
-            sapi.World.BlockAccessor.WalkBlocks(workspace.StartMarker, workspace.EndMarker, (block, pos) =>
+            sapi.World.BlockAccessor.WalkBlocks(workspace.StartMarker, workspace.EndMarker, (block, x, y, z) =>
             {
                 if (block.Id == 0) return;
 
                 int blockNum = ms.GetOrCreateBlockNumber(block);
-                BlockOffsetAndNumber offset = new BlockOffsetAndNumber(pos.X - centerPos.X, pos.Y - centerPos.Y, pos.Z - centerPos.Z, blockNum);
+                BlockOffsetAndNumber offset = new BlockOffsetAndNumber(x - centerPos.X, y - centerPos.Y, z - centerPos.Z, blockNum);
                 ms.Offsets.Add(offset);
             }, true);
 
@@ -995,7 +995,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.StartMarker = pos;
             Good("Start position " + workspace.StartMarker + " marked");
             EnsureInsideMap(workspace.StartMarker);
-            HighlightSelectedArea(workspace, fromPlayer);
+            workspace.HighlightSelectedArea();
+            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
         }
 
         public void SetEndPos(BlockPos pos)
@@ -1003,7 +1004,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.EndMarker = pos;
             Good("End position " + workspace.EndMarker + " marked");
             EnsureInsideMap(workspace.EndMarker);
-            HighlightSelectedArea(workspace, fromPlayer);
+            workspace.HighlightSelectedArea();
+            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
         }
 
 
@@ -1072,39 +1074,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             fromPlayer.WorldData.AreaSelectionMode = on;
             fromPlayer.BroadcastPlayerData();
-        }
-
-        public void ResendBlockHighlights()
-        {
-            WorldEditWorkspace workspace = GetOrCreateWorkSpace(fromPlayer);
-
-            HighlightSelectedArea(workspace, fromPlayer);
-
-            if (workspace.ToolsEnabled)
-            {
-                EnumHighlightBlocksMode mode = EnumHighlightBlocksMode.CenteredToSelectedBlock;
-                if (workspace.ToolOffsetMode == EnumToolOffsetMode.Attach) mode = EnumHighlightBlocksMode.AttachedToSelectedBlock;
-                if (workspace.ToolInstance != null)
-                {
-                    sapi.World.HighlightBlocks(fromPlayer, (int)EnumHighlightSlot.Brush, workspace.ToolInstance.GetBlockHighlights(this), workspace.ToolInstance.GetBlockHighlightColors(this), mode, EnumHighlightShape.Arbitrary);
-                }
-            }
-            else
-            {
-                sapi.World.HighlightBlocks(fromPlayer, (int)EnumHighlightSlot.Brush, new List<BlockPos>(), new List<int>());
-            }
-        }
-
-        private void HighlightSelectedArea(WorldEditWorkspace workspace, IPlayer player)
-        {
-            if (workspace.StartMarker != null && workspace.EndMarker != null)
-            {
-                sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Selection, new List<BlockPos>(new BlockPos[] { workspace.StartMarker, workspace.EndMarker }), EnumHighlightBlocksMode.Absolute, EnumHighlightShape.Cube);
-            }
-            else
-            {
-                sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Selection, new List<BlockPos>());
-            }
         }
 
         private void HandleHistoryChange(CmdArgs args, bool redo)
@@ -1302,7 +1271,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public bool MayPlace(Block block, int quantityBlocks)
         {
-            if (serverOverloadProtection)
+            if (workspace.serverOverloadProtection)
             {
                 if (quantityBlocks > 100 && block.LightHsv[2] > 5)
                 {

@@ -35,7 +35,7 @@ namespace Vintagestory.GameContent
                 new WorldInteraction()
                 {
                     ActionLangCode = "Edit (Requires creative mode)",
-                    HotKeyCode = "sneak",
+                    HotKeyCode = "shift",
                     MouseButton = EnumMouseButton.Right
                 },
                 new WorldInteraction()

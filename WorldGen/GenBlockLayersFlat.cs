@@ -96,7 +96,7 @@ namespace Vintagestory.ServerMods
             for (int y = 0; y < chunks.Length; y++)
             {
                 IServerChunk chunk = chunks[y];
-                for (int i = 0; i < chunk.Blocks.Length; i++) chunk.Blocks[i] = 0;
+                chunk.Blocks.ClearBlocksAndPrepare();
             }
 
 
@@ -106,6 +106,7 @@ namespace Vintagestory.ServerMods
 
 
             int yMove = chunksize * chunksize;
+            ushort height = (ushort)(blockIds.Length - 1);
 
             for (int x = 0; x < chunksize; x++)
             {
@@ -113,12 +114,12 @@ namespace Vintagestory.ServerMods
                 {
                     int index3d = z * chunksize + x;
 
-                    rainheightmap[index3d] = (ushort)(blockIds.Length-1);
-                    terrainheightmap[index3d] = (ushort)(blockIds.Length-1);
+                    rainheightmap[index3d] = height;
+                    terrainheightmap[index3d] = height;
 
                     for (int i = 0; i < blockIds.Length; i++)
                     {
-                        botChunk.Blocks[index3d] = blockIds[i];
+                        botChunk.Blocks.SetBlockUnsafe(index3d, blockIds[i]);
                         index3d += yMove;
                     }
                 }

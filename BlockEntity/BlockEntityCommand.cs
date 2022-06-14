@@ -58,7 +58,7 @@ namespace Vintagestory.GameContent
 
         public void OnInteract(IPlayer byPlayer)
         {
-            if (byPlayer.Entity.Controls.Sneak)
+            if (byPlayer.Entity.Controls.ShiftKey)
             {
                 if (Api.Side == EnumAppSide.Client && byPlayer.WorldData.CurrentGameMode == EnumGameMode.Creative && byPlayer.HasPrivilege("controlserver"))
                 {

@@ -98,7 +98,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             this.blockDatas = schematics;
             nextRnd = rand.Next(blockDatas.Length);
-            worldEdit.ResendBlockHighlights();
+            workspace.ResendBlockHighlights(worldEdit);
         }
 
         public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
@@ -111,7 +111,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         this.blockDatas = new BlockSchematic[] { workspace.clipboardBlockData };
                         worldEdit.Good("Ok, using copied blockdata");
                         nextRnd = 0;
-                        worldEdit.ResendBlockHighlights();
+                        workspace.ResendBlockHighlights(worldEdit);
                     } else
                     {
                         worldEdit.Good("No copied block data available");
@@ -161,7 +161,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     nextRnd = rand.Next(blockDatas.Length);
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
 
@@ -180,7 +180,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     worldEdit.Good("Paste origin " + Origin + " set.");
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
 
@@ -198,7 +198,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     worldEdit.Good("Replace mode " + ReplaceMode + " set.");
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
 
@@ -209,13 +209,13 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     SetRandomAngle(worldEdit.sapi.World);
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
 
                 case "imn":
                     nextRnd = rand.Next(blockDatas.Length);
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
                     break;
 
 
@@ -249,7 +249,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, angle, null);
                     }
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     worldEdit.Good("Ok, all schematics rotated by " + angle + " degrees");
 
@@ -268,7 +268,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, EnumAxis.Y);
                     }
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     worldEdit.Good("Ok, imported sources flipped");
 
@@ -291,7 +291,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, axis);
                     }
 
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     worldEdit.Good("Ok, imported sources mirrored around " + axis + " axis");
 
@@ -332,7 +332,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);
-            worldEdit.ResendBlockHighlights();
+            workspace.ResendBlockHighlights(worldEdit);
         }
 
 

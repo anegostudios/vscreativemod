@@ -57,7 +57,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     LineMode = startpoint;
                     worldEdit.Good(workspace.ToolName + " mode " + startpoint + " set.");
-                    worldEdit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldEdit);
 
                     return true;
             }

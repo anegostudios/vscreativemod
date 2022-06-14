@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -138,9 +139,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             float radius = SearchRadius;
 
-            int repl = ReplaceableLevel;
+            int repl = blockToPlace.Id == 0 ? 0 : ReplaceableLevel;
 
             BlockFacing[] faces = Mode == 2 ? BlockFacing.HORIZONTALS : BlockFacing.ALLFACES;
+            if (Mode == 1) faces = BlockFacing.HORIZONTALS.Append(BlockFacing.DOWN);
+
             BlockPos curPos = new BlockPos();
             
             while (bfsQueue.Count > 0)
@@ -156,7 +159,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (inBounds)
                     {
-                        if (block.Replaceable >= repl && !fillablePositions.Contains(curPos)) 
+                        if ((block.Replaceable >= repl || block.BlockMaterial == EnumBlockMaterial.Plant) && !fillablePositions.Contains(curPos)) 
                         {
                             bfsQueue.Enqueue(new Vec4i(curPos.X, curPos.Y, curPos.Z, bpos.W + 1));
                             fillablePositions.Add(curPos.Copy());

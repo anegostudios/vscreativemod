@@ -101,13 +101,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                     worldedit.MoveArea(vec.X, vec.Y, vec.Z, workspace.StartMarker, workspace.EndMarker);
                     workspace.StartMarker.Add(vec);
                     workspace.EndMarker.Add(vec);
-                    worldedit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldedit);
                     break;
 
                 case EnumMoveToolMode.MoveSelection:
                     workspace.StartMarker.Add(vec);
                     workspace.EndMarker.Add(vec);
-                    worldedit.ResendBlockHighlights();
+                    workspace.ResendBlockHighlights(worldedit);
                     break;
             }
         }

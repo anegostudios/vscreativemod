@@ -61,7 +61,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             Good(string.Format("Area grown by {0} blocks towards {1}", length, facing));
 
-            ResendBlockHighlights();
+            workspace.HighlightSelectedArea();
+
+            // Stores the markers as a history state
+            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
         }
 
 
@@ -88,17 +91,24 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             EnumOrigin origin = EnumOrigin.BottomCenter;
             BlockPos mid = (workspace.StartMarker + workspace.EndMarker) / 2;
+            mid.Y = workspace.StartMarker.Y;
 
             BlockSchematic schematic = CopyArea(workspace.StartMarker, workspace.EndMarker);
+
+            workspace.revertableBlockAccess.BeginMultiEdit();
+
             schematic.TransformWhilePacked(sapi.World, origin, angle, null);
             FillArea(null, workspace.StartMarker, workspace.EndMarker);
 
             PasteBlockData(schematic, mid, origin);
 
-            ResendBlockHighlights();
-        }
-        
+            workspace.StartMarker = schematic.GetStartPos(mid, origin);
+            workspace.EndMarker = workspace.StartMarker.AddCopy(schematic.SizeX, schematic.SizeY, schematic.SizeZ);
 
+            workspace.revertableBlockAccess.EndMultiEdit();
+
+            workspace.HighlightSelectedArea();
+        }
 
 
         private void HandleRepeatCommand(BlockFacing face, CmdArgs args)
@@ -173,26 +183,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
 
-            workspace.revertableBlockAccess.Commit();
-
-            foreach (var val in blockEntityData)
-            {
-                BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(val.Key);
-                val.Value.SetInt("posx", val.Key.X);
-                val.Value.SetInt("posy", val.Key.Y);
-                val.Value.SetInt("posz", val.Key.Z);
-
-                be?.FromTreeAttributes(val.Value, workspace.world);
-            }
-
-            if (repeats > 1) Good("Marked area repeated " + repeats + ((repeats > 1) ? " times" : " time"));
-
-
             if (selectNewArea)
             {
                 workspace.StartMarker.Add(offset);
                 workspace.EndMarker.Add(offset);
-                ResendBlockHighlights();
+                workspace.ResendBlockHighlights(this);
             }
 
             if (growNewArea)
@@ -209,8 +204,24 @@ namespace Vintagestory.ServerMods.WorldEdit
                     endPos.Z + (offset.Z > 0 ? offset.Z : 0)
                 );
 
-                ResendBlockHighlights();
+                workspace.ResendBlockHighlights(this);
             }
+
+            workspace.revertableBlockAccess.Commit();
+
+            foreach (var val in blockEntityData)
+            {
+                BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(val.Key);
+                val.Value.SetInt("posx", val.Key.X);
+                val.Value.SetInt("posy", val.Key.Y);
+                val.Value.SetInt("posz", val.Key.Z);
+
+                be?.FromTreeAttributes(val.Value, workspace.world);
+            }
+
+            if (repeats > 1) Good("Marked area repeated " + repeats + ((repeats > 1) ? " times" : " time"));
+
+
         }
 
 
@@ -291,6 +302,32 @@ namespace Vintagestory.ServerMods.WorldEdit
                 curPos.X++;
             }
 
+
+
+            if (selectNewArea)
+            {
+                workspace.StartMarker.Add(offset);
+                workspace.EndMarker.Add(offset);
+                workspace.ResendBlockHighlights(this);
+            }
+
+            if (growNewArea)
+            {
+                workspace.StartMarker.Set(
+                    startPos.X + (offset.X < 0 ? offset.X : 0),
+                    startPos.Y + (offset.Y < 0 ? offset.Y : 0),
+                    startPos.Z + (offset.Z < 0 ? offset.Z : 0)
+                );
+
+                workspace.EndMarker.Set(
+                    endPos.X + (offset.X > 0 ? offset.X : 0),
+                    endPos.Y + (offset.Y > 0 ? offset.Y : 0),
+                    endPos.Z + (offset.Z > 0 ? offset.Z : 0)
+                );
+
+                workspace.ResendBlockHighlights(this);
+            }
+
             workspace.revertableBlockAccess.Commit();
             Good("Marked area mirrored " + dir);
 
@@ -313,30 +350,6 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     be.FromTreeAttributes(tree, this.sapi.World);
                 }
-            }
-
-            if (selectNewArea)
-            {
-                workspace.StartMarker.Add(offset);
-                workspace.EndMarker.Add(offset);
-                ResendBlockHighlights();
-            }
-
-            if (growNewArea)
-            {
-                workspace.StartMarker.Set(
-                    startPos.X + (offset.X < 0 ? offset.X : 0), 
-                    startPos.Y + (offset.Y < 0 ? offset.Y : 0), 
-                    startPos.Z + (offset.Z < 0 ? offset.Z : 0)
-                );
-
-                workspace.EndMarker.Set(
-                    endPos.X + (offset.X > 0 ? offset.X : 0),
-                    endPos.Y + (offset.Y > 0 ? offset.Y : 0),
-                    endPos.Z + (offset.Z > 0 ? offset.Z : 0)
-                );
-
-                ResendBlockHighlights();
             }
         }
 
@@ -381,7 +394,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             workspace.StartMarker.Add(dx, dy, dz);
             workspace.EndMarker.Add(dx, dy, dz);
-            ResendBlockHighlights();
+            workspace.ResendBlockHighlights(this);
+            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
         }
         
         private void HandleShiftCommand(BlockFacing face, CmdArgs args)
@@ -420,8 +434,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             workspace.StartMarker.Add(dx, dy, dz);
             workspace.EndMarker.Add(dx, dy, dz);
-            ResendBlockHighlights();
+            workspace.ResendBlockHighlights(this);
             Good("Shifted marked area by x/y/z = " + dx + "/" + dy + "/" + dz);
+            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
         }
 
 
@@ -445,7 +460,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockPos newPos = new BlockPos();
             BlockPos prevPos = new BlockPos();
 
-            Dictionary<BlockPos, ITreeAttribute> blockEntityData = new Dictionary<BlockPos, ITreeAttribute>();
+            Dictionary<BlockPos, TreeAttribute> blockEntityData = new Dictionary<BlockPos, TreeAttribute>();
 
             // Clear area
             while (curPos.X < endPos.X)
@@ -500,17 +515,36 @@ namespace Vintagestory.ServerMods.WorldEdit
                 curPos.X++;
             }
            
-            workspace.revertableBlockAccess.Commit();
+            var updates = workspace.revertableBlockAccess.Commit();
+
+            // Needed so that redo works
+            foreach (var update in updates)
+            {
+                if (update.OldBlockId == 0)
+                {
+                    TreeAttribute betree;
+                    if (blockEntityData.TryGetValue(update.Pos, out betree))
+                    {
+                        betree.SetInt("posx", update.Pos.X);
+                        betree.SetInt("posy", update.Pos.Y);
+                        betree.SetInt("posz", update.Pos.Z);
+
+                        update.BlockEntityData = betree.ToBytes();
+                    }
+                }
+                
+            }
 
             // restore block entity data
             foreach (var val in blockEntityData)
             {
-                BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(val.Key);
+                var pos = val.Key;
+                BlockEntity be = workspace.revertableBlockAccess.GetBlockEntity(pos);
                 if (be != null)
                 {
-                    val.Value.SetInt("posx", val.Key.X);
-                    val.Value.SetInt("posy", val.Key.Y);
-                    val.Value.SetInt("posz", val.Key.Z);
+                    val.Value.SetInt("posx", pos.X);
+                    val.Value.SetInt("posy", pos.Y);
+                    val.Value.SetInt("posz", pos.Z);
 
                     be.FromTreeAttributes(val.Value, this.sapi.World);
                 }
@@ -553,6 +587,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     curPos.Z = startPos.Z;
                     while (curPos.Z < finalPos.Z)
                     {
+                        workspace.revertableBlockAccess.SetLiquidBlock(0, curPos);
                         workspace.revertableBlockAccess.SetBlock(blockId, curPos, blockStack);
                         curPos.Z++;
                         updated++;

@@ -32,7 +32,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public SelectTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
             if (!workspace.IntValues.ContainsKey(Prefix + "magicSelect")) MagicSelect = false;
-            if (!workspace.StringValues.ContainsKey(Prefix + "magicEdgeBlocks")) SetEdgeBlocks(workspace.world, new string[] { "air", "soil-*" });
+            if (!workspace.StringValues.ContainsKey(Prefix + "magicEdgeBlocks")) SetEdgeBlocks(workspace.world, new string[] { "air", "soil-*", "tallgrass-*" });
             else SetEdgeBlocks(workspace.world, EdgeBlocks);
         }
 
@@ -168,6 +168,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 Cuboidi sele = MagiSelect(blockSelection);
                 worldEdit.SetStartPos(sele.Start.AsBlockPos);
                 worldEdit.SetEndPos(sele.End.AsBlockPos);
+
+                workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
             }
             else
             {
@@ -179,6 +181,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     if (workspace.StartMarker.Z <= endpos.Z) endpos.Z++;
                 }
                 worldEdit.SetEndPos(endpos);
+
+                workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
             }
 
             base.OnInteractStart(worldEdit, blockSelection);
