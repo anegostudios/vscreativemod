@@ -1043,7 +1043,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             if (chunk == null) continue;
 
                             int index = ((dy % chunksize) * chunksize + dz) * chunksize + dx;
-                            Block block = sapi.World.Blocks[chunk.Blocks[index]];
+                            Block block = sapi.World.Blocks[chunk.Data.GetBlockId(index, BlockLayersAccess.FluidOrSolid)];
 
                             if (!block.RainPermeable || dy == 0)
                             {

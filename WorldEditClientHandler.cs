@@ -55,7 +55,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!capi.Settings.Int.Exists("schematicMaxUploadSizeKb"))
             {
-                capi.Settings.Int["schematicMaxUploadSizeKb"] = 75;
+                capi.Settings.Int["schematicMaxUploadSizeKb"] = 200;
             }
 
         }
@@ -112,7 +112,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (ownWorkspace != null && ownWorkspace.ToolsEnabled && ownWorkspace.ToolName == "Import")
             {
 
-                int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 150);
+                int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 200);
             
                 // Limit the file size
                 if (bytes / 1024 > schematicMaxUploadSizeKb)

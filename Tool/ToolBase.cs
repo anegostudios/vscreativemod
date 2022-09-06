@@ -19,12 +19,12 @@ namespace Vintagestory.ServerMods.WorldEdit
     public abstract class ToolBase
     {
         public WorldEditWorkspace workspace;
-        public IBlockAccessorRevertable blockAccessRev;
+        public IBlockAccessorRevertable ba;
 
 
         public ToolBase(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess)
         {
-            this.blockAccessRev = blockAccess;
+            this.ba = blockAccess;
             this.workspace = workspace;
         }
 
@@ -53,7 +53,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public virtual void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
-            Block placedBlock = blockAccessRev.GetBlock(blockSel.Position);
+            Block placedBlock = ba.GetBlock(blockSel.Position);
             BlockPos targetPos = blockSel.Position.Copy();
 
             if (workspace.ToolOffsetMode == EnumToolOffsetMode.Attach)
@@ -65,14 +65,14 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (ApplyToolBuild(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack))
             {
-                blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
-                blockAccessRev.Commit();
+                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
+                ba.Commit();
             }
         }
 
         public virtual void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
-            Block oldblock = blockAccessRev.GetBlock(blockSel.Position);
+            Block oldblock = ba.GetBlock(blockSel.Position);
             BlockPos targetPos = blockSel.Position.Copy();
 
             if (workspace.ToolOffsetMode == EnumToolOffsetMode.Attach)
@@ -86,9 +86,9 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 if (handling == EnumHandling.PassThrough)
                 {
-                    blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldblock.Id, blockAccessRev.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
+                    ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldblock.Id, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
                 }
-                blockAccessRev.Commit();
+                ba.Commit();
             }
         }
 

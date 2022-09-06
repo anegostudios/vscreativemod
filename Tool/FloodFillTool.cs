@@ -106,7 +106,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             mapheight = worldEdit.sapi.WorldManager.MapSizeY;
 
-            Block block = blockAccessRev.GetBlock(pos);
+            Block block = ba.GetBlock(pos);
             if (oldBlockId >= 0)
             {
                 worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
@@ -117,7 +117,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             FloodFillAt(worldEdit, block, withItemstack, pos.X, pos.Y, pos.Z);
 
-            blockAccessRev.Commit();
+            ba.Commit();
         }
 
 
@@ -154,7 +154,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     curPos.Set(bpos.X + facing.Normali.X, bpos.Y + facing.Normali.Y, bpos.Z + facing.Normali.Z);
                     
-                    Block block = blockAccessRev.GetBlock(curPos);
+                    Block block = ba.GetBlock(curPos);
                     bool inBounds = bpos.W < radius;
 
                     if (inBounds)
@@ -181,7 +181,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             foreach (BlockPos p in fillablePositions)
             {
-                blockAccessRev.SetBlock(blockToPlace.BlockId, p, withItemStack);
+                ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
             worldEdit.Bad(fillablePositions.Count + " blocks placed");

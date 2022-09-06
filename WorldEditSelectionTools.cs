@@ -587,7 +587,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     curPos.Z = startPos.Z;
                     while (curPos.Z < finalPos.Z)
                     {
-                        workspace.revertableBlockAccess.SetLiquidBlock(0, curPos);
+                        workspace.revertableBlockAccess.SetBlock(0, curPos, BlockLayersAccess.Fluid);
                         workspace.revertableBlockAccess.SetBlock(blockId, curPos, blockStack);
                         curPos.Z++;
                         updated++;

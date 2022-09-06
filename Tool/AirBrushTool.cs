@@ -174,15 +174,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             float radSq = Radius * Radius;
             float q = Quantity;
 
-            Block block = blockAccessRev.GetBlock(blockSel.Position);
-            if (isbreak) block = blockAccessRev.GetBlock(0);
+            Block block = ba.GetBlock(blockSel.Position);
+            if (isbreak) block = ba.GetBlock(0);
 
             int quantityBlocks = (int)(GameMath.PI * radSq);
             if (!worldEdit.MayPlace(block, (int)q)) return;
 
             if (oldBlockId >= 0) worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             lcgRand.SetWorldSeed(rand.Next());
-            lcgRand.InitPositionSeed(blockSel.Position.X / blockAccessRev.ChunkSize, blockSel.Position.Z / blockAccessRev.ChunkSize);
+            lcgRand.InitPositionSeed(blockSel.Position.X / ba.ChunkSize, blockSel.Position.Z / ba.ChunkSize);
 
             int xRadInt = (int)Math.Ceiling(Radius);
             int yRadInt = (int)Math.Ceiling(Radius);
@@ -202,7 +202,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         if (dx * dx + dy * dy + dz * dz > radSq) continue;
 
                         dpos = blockSel.Position.AddCopy(dx, dy, dz);
-                        testblock = blockAccessRev.GetBlock(dpos);
+                        testblock = ba.GetBlock(dpos);
                         if (testblock.Replaceable >= 6000) continue;
 
                         for (int i = 0; i < BlockFacing.NumberOfFaces; i++)
@@ -210,7 +210,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             if (Apply == EnumAirBrushApply.SelectedFace && BlockFacing.ALLFACES[i] != blockSel.Face) continue;
 
                             ddpos = dpos.AddCopy(BlockFacing.ALLFACES[i]);
-                            Block dblock = blockAccessRev.GetBlock(ddpos);
+                            Block dblock = ba.GetBlock(ddpos);
                             if (dblock.Replaceable >= 6000 && (dblock.IsLiquid() == block.IsLiquid()))
                             {
                                 // We found an air block beside a solid block -> let's remember that air block and keep looking
@@ -243,20 +243,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                     
                 if (mode == EnumAirBrushMode.Add)
                 {
-                    block.TryPlaceBlockForWorldGen(blockAccessRev, dpos, BlockFacing.UP, lcgRand);
+                    block.TryPlaceBlockForWorldGen(ba, dpos, BlockFacing.UP, lcgRand);
                 } else
                 {
-                    blockAccessRev.SetBlock(block.BlockId, dpos, withItemStack);
+                    ba.SetBlock(block.BlockId, dpos, withItemStack);
                 }
                 
             }
 
             if (oldBlockId >= 0)
             {
-                blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
             }
 
-            blockAccessRev.Commit();
+            ba.Commit();
 
 
             return;

@@ -53,10 +53,10 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (BrushRadius == 0) return false;
 
-            Block blockToPlace = blockAccessRev.GetBlock(blockSel.Position);
-            if (shrink) blockToPlace = blockAccessRev.GetBlock(0);
+            Block blockToPlace = ba.GetBlock(blockSel.Position);
+            if (shrink) blockToPlace = ba.GetBlock(0);
 
-            int selectedBlockID = blockAccessRev.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.Opposite));
+            int selectedBlockID = ba.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.Opposite));
 
             int radInt = (int)Math.Ceiling(BrushRadius);
             float radSq = BrushRadius * BrushRadius;
@@ -74,14 +74,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                         if (dx * dx + dy*dy + dz * dz > radSq) continue;
 
                         dpos = blockSel.Position.AddCopy(dx, dy, dz);
-                        blockAtPos = blockAccessRev.GetBlock(dpos);
+                        blockAtPos = ba.GetBlock(dpos);
                         if (blockAtPos.Replaceable >= 6000) continue;
                         if (GrowShrinkMode == EnumGrowShrinkMode.SelectedBlock && blockAtPos.BlockId != selectedBlockID) continue;
 
                         for (int i = 0; i < BlockFacing.NumberOfFaces; i++)
                         {
                             ddpos = dpos.AddCopy(BlockFacing.ALLFACES[i]);
-                            if (blockAccessRev.GetBlock(ddpos).Replaceable >= 6000)
+                            if (ba.GetBlock(ddpos).Replaceable >= 6000)
                             {
                                 // We found an air block beside a solid block -> let's remember that solid block for removal and we can stop here
                                 if (shrink)
@@ -101,14 +101,14 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             foreach (BlockPos p in viablePositions)
             {
-                blockAccessRev.SetBlock(blockToPlace.BlockId, p, withItemStack);
+                ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
             if (oldBlockId >= 0)
             {
-                blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
+                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
             }
-            blockAccessRev.Commit();
+            ba.Commit();
 
 
             return true;

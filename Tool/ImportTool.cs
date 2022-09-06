@@ -321,14 +321,14 @@ namespace Vintagestory.ServerMods.WorldEdit
             nextRnd = rand.Next(blockDatas.Length);
 
             BlockPos originPos = blockData.GetStartPos(blockSel.Position, Origin);
-            blockData.Init(blockAccessRev);
-            blockData.Place(blockAccessRev, worldEdit.sapi.World, originPos, ReplaceMode, worldEdit.ReplaceMetaBlocks);
+            blockData.Init(ba);
+            blockData.Place(ba, worldEdit.sapi.World, originPos, ReplaceMode, worldEdit.ReplaceMetaBlocks);
 
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetStagedBlockId(blockSel.Position));
-            blockAccessRev.Commit();
-            blockData.PlaceEntitiesAndBlockEntities(blockAccessRev, worldEdit.sapi.World, originPos);
-            blockData.PlaceDecors(blockAccessRev, originPos, true);
-            blockAccessRev.CommitBlockEntityData();
+            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position));
+            ba.Commit();
+            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos);
+            blockData.PlaceDecors(ba, originPos, true);
+            ba.CommitBlockEntityData();
 
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);

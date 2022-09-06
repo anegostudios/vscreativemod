@@ -23,7 +23,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public override bool ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            oldblock = blockAccessRev.GetBlock(0);
+            oldblock = ba.GetBlock(0);
             return PerformBrushAction(worldEdit, oldblock, -1, blockSel, targetPos, null);
         }
         

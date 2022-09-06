@@ -83,18 +83,18 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             BlockPos destPos = blockSel.Position.AddCopy(blockSel.Face.Opposite);
 
-            Block block = blockAccessRev.GetBlock(blockSel.Position);
-            if (PlaceMode) block = blockAccessRev.GetBlock(0);
+            Block block = ba.GetBlock(blockSel.Position);
+            if (PlaceMode) block = ba.GetBlock(0);
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
 
             if (!worldEdit.MayPlace(block, startPos.ManhattenDistance(destPos))) return;
 
-            GameMath.BresenHamPlotLine3d(startPos.X, startPos.Y, startPos.Z, destPos.X, destPos.Y, destPos.Z, (pos) => blockAccessRev.SetBlock(block.BlockId, pos, withItemStack));
+            GameMath.BresenHamPlotLine3d(startPos.X, startPos.Y, startPos.Z, destPos.X, destPos.Y, destPos.Z, (pos) => ba.SetBlock(block.BlockId, pos, withItemStack));
 
             if (LineMode == EnumLineStartPoint.LineStrip) startPos = destPos.Copy();
 
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
-            blockAccessRev.Commit();
+            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
+            ba.Commit();
         }
 
         public override Vec3i Size

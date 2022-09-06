@@ -137,7 +137,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int radInt = (int)Math.Ceiling(Radius);
             float radSq = Radius * Radius;
 
-            Block block = blockAccessRev.GetBlock(pos);
+            Block block = ba.GetBlock(pos);
             if (sign > 0)
             {
                 worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
@@ -183,7 +183,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             break;
                     }
 
-                    while (dpos.Y > 0 && blockAccessRev.GetBlock(dpos).Replaceable >= 6000) dpos.Down();
+                    while (dpos.Y > 0 && ba.GetBlock(dpos).Replaceable >= 6000) dpos.Down();
                     
                     
                     if (height < 0)
@@ -200,8 +200,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
-            blockAccessRev.SetHistoryStateBlock(pos.X, pos.Y, pos.Z, oldBlockId, blockAccessRev.GetBlockId(pos));
-            blockAccessRev.Commit();
+            ba.SetHistoryStateBlock(pos.X, pos.Y, pos.Z, oldBlockId, ba.GetBlockId(pos));
+            ba.Commit();
         }
 
         private void Grow(IWorldAccessor world, float quantity, BlockPos dpos, Block block, BlockFacing face, ItemStack withItemstack)
@@ -209,7 +209,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             while (quantity-- >= 1)
             {
                 //if (quantity < 1 && rand.NextDouble() > quantity) break;
-                blockAccessRev.SetBlock(block.BlockId, dpos, withItemstack);
+                ba.SetBlock(block.BlockId, dpos, withItemstack);
                 dpos.Up();
             }
         }
@@ -219,7 +219,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             while (quantity-- >= 1)
             {
                 //if (quantity < 1 && rand.NextDouble() > quantity) break;
-                blockAccessRev.SetBlock(0, dpos);
+                ba.SetBlock(0, dpos);
                 dpos.Down();
             }
         }

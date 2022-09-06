@@ -30,7 +30,7 @@ namespace Vintagestory.ServerMods
             this.api = api;
             chunksize = api.WorldManager.ChunkSize;
 
-            this.api.Event.InitWorldGenerator(initWorldGen, "superflat");
+            api.Event.ServerRunPhase(EnumServerRunPhase.ModsAndConfigReady, loadGamePre);
             this.api.Event.ChunkColumnGeneration(OnChunkColumnGeneration, EnumWorldGenPass.Terrain, "superflat");
 
             if (!api.ModLoader.IsModEnabled("survival"))
@@ -39,27 +39,10 @@ namespace Vintagestory.ServerMods
             }
         }
 
-        private void OnMapRegionGen(IMapRegion mapRegion, int regionX, int regionZ)
+        private void loadGamePre()
         {
-            mapRegion.ClimateMap = new IntDataMap2D()
-            {
-                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
-            };
-            mapRegion.ForestMap = new IntDataMap2D()
-            {
-                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
-            };
-            mapRegion.ShrubMap = new IntDataMap2D()
-            {
-                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
-            };
-        }
+            if (api.WorldManager.SaveGame.WorldType != "superflat") return;
 
-        private void initWorldGen()
-        {
             api.WorldManager.SaveGame.EntitySpawning = false;
 
             IAsset asset = api.Assets.Get("worldgen/layers.json");
@@ -90,13 +73,33 @@ namespace Vintagestory.ServerMods
             api.WorldManager.SetSeaLevel(blockIds.Count);
         }
 
+        private void OnMapRegionGen(IMapRegion mapRegion, int regionX, int regionZ)
+        {
+            mapRegion.ClimateMap = new IntDataMap2D()
+            {
+                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
+                Size = 2
+            };
+            mapRegion.ForestMap = new IntDataMap2D()
+            {
+                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
+                Size = 2
+            };
+            mapRegion.ShrubMap = new IntDataMap2D()
+            {
+                Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
+                Size = 2
+            };
+        }
+
+
         private void OnChunkColumnGeneration(IServerChunk[] chunks, int chunkX, int chunkZ, ITreeAttribute chunkGenParams = null)
         {
             // Because blockdata is cached and not cleaned after release
             for (int y = 0; y < chunks.Length; y++)
             {
                 IServerChunk chunk = chunks[y];
-                chunk.Blocks.ClearBlocksAndPrepare();
+                chunk.Data.ClearBlocksAndPrepare();
             }
 
 
@@ -119,7 +122,7 @@ namespace Vintagestory.ServerMods
 
                     for (int i = 0; i < blockIds.Length; i++)
                     {
-                        botChunk.Blocks.SetBlockUnsafe(index3d, blockIds[i]);
+                        botChunk.Data.SetBlockUnsafe(index3d, blockIds[i]);
                         index3d += yMove;
                     }
                 }

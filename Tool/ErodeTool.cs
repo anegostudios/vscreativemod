@@ -171,7 +171,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (BrushRadius <= 0) return;
 
-            Block blockToPlace = blockAccessRev.GetBlock(blockSel.Position);
+            Block blockToPlace = ba.GetBlock(blockSel.Position);
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
 
             int quantityBlocks = (int)((GameMath.PI * BrushRadius * BrushRadius) * (4 * KernelRadius * KernelRadius) * Iterations);
@@ -183,11 +183,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             int q = Iterations;
             while (q-- > 0)
             {
-                ApplyErode(worldEdit, blockAccessRev, blockSel.Position, blockToPlace, withItemStack);
+                ApplyErode(worldEdit, ba, blockSel.Position, blockToPlace, withItemStack);
             }
 
-            blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, blockAccessRev.GetBlockId(blockSel.Position));
-            blockAccessRev.Commit();
+            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
+            ba.Commit();
         }
 
         private void ApplyErode(WorldEdit worldEdit, IBlockAccessor blockAccessor, BlockPos pos, Block blockToPlace, ItemStack withItemStack)
@@ -198,7 +198,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int quantitySamples = (2 * blurRad + 1) * (2 * blurRad + 1);
 
             BlockPos dpos;
-            Block prevBlock = blockAccessRev.GetBlock(0);
+            Block prevBlock = ba.GetBlock(0);
             bool useSelected = UseSelectedBlock;
 
             int mapSizeY = worldEdit.sapi.WorldManager.MapSizeY;
@@ -240,9 +240,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                         
                         if (useSelected)
                         {
-                            blockAccessRev.SetBlock(blockToPlace.BlockId, dpos.Up(), withItemStack);
+                            ba.SetBlock(blockToPlace.BlockId, dpos.Up(), withItemStack);
                         } else {
-                            blockAccessRev.SetBlock(prevBlock.BlockId, dpos.Up());
+                            ba.SetBlock(prevBlock.BlockId, dpos.Up());
                         }
                         
                     }

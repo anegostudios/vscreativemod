@@ -390,22 +390,27 @@ namespace Vintagestory.ServerMods.WorldEdit
         public bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
             if (BrushDim1 <= 0) return false;
 
-            Block selectedBlock = blockSel.DidOffset ? blockAccessRev.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : blockAccessRev.GetBlock(blockSel.Position);
+            Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
 
             int selectedBlockId = selectedBlock.BlockId;
 
             if (oldBlockId >= 0)
             {
-                worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-            }
-            
+                if (placedBlock.ForFluidsLayer)
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position, BlockLayersAccess.Fluid);
+                } else
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+                }
 
+            }
 
             EnumBrushMode brushMode = BrushMode;
 
             int blockId = placedBlock.BlockId;
 
-            if (!worldEdit.MayPlace(blockAccessRev.GetBlock(blockId), brushPositions.Length)) return false;
+            if (!worldEdit.MayPlace(ba.GetBlock(blockId), brushPositions.Length)) return false;
 
             EnumDepthLimit depthLimit = DepthLimit;
 
@@ -417,52 +422,62 @@ namespace Vintagestory.ServerMods.WorldEdit
                 switch (depthLimit)
                 {
                     case EnumDepthLimit.Top1:
-                        skip = blockAccessRev.GetBlockId(dpos) == 0 || blockAccessRev.GetBlockId(dpos.X, dpos.Y + 1, dpos.Z) != 0;
+                        skip = isAir(ba, dpos) || !isAir(ba, dpos, 1);
                         break;
                     case EnumDepthLimit.Top2:
-                        skip = blockAccessRev.GetBlockId(dpos) == 0 || (blockAccessRev.GetBlockId(dpos.X, dpos.Y + 1, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 2, dpos.Z) != 0);
+                        skip = isAir(ba, dpos) || (!isAir(ba, dpos, 1) && !isAir(ba, dpos, 2));
                         break;
                     case EnumDepthLimit.Top3:
-                        skip = blockAccessRev.GetBlockId(dpos) == 0 || (blockAccessRev.GetBlockId(dpos.X, dpos.Y + 1, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 2, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 3, dpos.Z) != 0);
+                        skip = isAir(ba, dpos) || (!isAir(ba, dpos, 1) && !isAir(ba, dpos, 2) && !isAir(ba, dpos, 3));
                         break;
                     case EnumDepthLimit.Top4:
-                        skip = blockAccessRev.GetBlockId(dpos) == 0 || (blockAccessRev.GetBlockId(dpos.X, dpos.Y + 1, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 2, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 3, dpos.Z) != 0 && blockAccessRev.GetBlockId(dpos.X, dpos.Y + 4, dpos.Z) != 0);
+                        skip = isAir(ba, dpos) || (!isAir(ba, dpos, 1) && !isAir(ba, dpos, 2) && !isAir(ba, dpos, 3) && !isAir(ba, dpos, 4));
                         break;                    
                 }
                 if (skip) continue;
 
 
+                bool setHere;
                 switch (brushMode)
                 {
                     case EnumBrushMode.ReplaceAir:
-                        if (blockAccessRev.GetBlockId(dpos) == 0)
-                        {
-                            blockAccessRev.SetBlock(blockId, dpos, withItemStack);
-                        }
+                        setHere = ba.GetBlock(dpos, BlockLayersAccess.Default).Id == 0;
                         break;
 
                     case EnumBrushMode.ReplaceNonAir:
-                        if (blockAccessRev.GetBlockId(dpos) != 0)
-                        {
-                            blockAccessRev.SetBlock(blockId, dpos, withItemStack);
-                        }
+                        setHere = ba.GetBlock(dpos, BlockLayersAccess.Default).Id != 0;
                         break;
 
-                    case EnumBrushMode.ReplaceSelected:
-                        if (blockAccessRev.GetBlockId(dpos) == selectedBlockId)
-                        {
-                            blockAccessRev.SetBlock(blockId, dpos, withItemStack);
-                        }
-
+                    case EnumBrushMode.ReplaceSelected:     // Note it is usually impossible to select water blocks, but the selectedBlock could be ice
+                        setHere = ba.GetBlock(dpos, selectedBlock.ForFluidsLayer ? BlockLayersAccess.Fluid : BlockLayersAccess.SolidBlocks).Id == selectedBlockId;
                         break;
 
                     default:
-                        blockAccessRev.SetBlock(blockId, dpos, withItemStack);
+                        setHere = true;
                         break;
+                }
+
+                if (setHere)
+                {
+                    if (placedBlock.ForFluidsLayer)
+                    {
+                        ba.SetBlock(blockId, dpos, BlockLayersAccess.Fluid);
+                        ba.SetBlock(0, dpos);
+                    }
+                    else
+                    {
+                        ba.SetBlock(0, dpos, BlockLayersAccess.Fluid);
+                        ba.SetBlock(blockId, dpos, withItemStack);
+                    }
                 }
             }
 
             return true;
+        }
+
+        public bool isAir(IBlockAccessor blockAccessor, BlockPos pos, int dy = 0)
+        {
+            return blockAccessor.GetBlock(pos.X, pos.Y + dy, pos.Z).Id == 0;
         }
 
         public override List<BlockPos> GetBlockHighlights(WorldEdit worldEdit)
