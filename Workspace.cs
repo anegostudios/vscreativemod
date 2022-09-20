@@ -275,7 +275,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (ToolOffsetMode == EnumToolOffsetMode.Attach) mode = EnumHighlightBlocksMode.AttachedToSelectedBlock;
                 if (ToolInstance != null)
                 {
-                    world.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, ToolInstance.GetBlockHighlights(we), ToolInstance.GetBlockHighlightColors(we), mode, EnumHighlightShape.Arbitrary);
+                    world.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, ToolInstance.GetBlockHighlights(we), ToolInstance.GetBlockHighlightColors(we), mode, ToolInstance.GetBlockHighlightShape(we));
                 }
             }
             else

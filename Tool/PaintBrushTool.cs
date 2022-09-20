@@ -480,8 +480,19 @@ namespace Vintagestory.ServerMods.WorldEdit
             return blockAccessor.GetBlock(pos.X, pos.Y + dy, pos.Z).Id == 0;
         }
 
+        public override EnumHighlightShape GetBlockHighlightShape(WorldEdit we)
+        {
+            if (brushPositions.Length > 300000) return EnumHighlightShape.Cube;
+
+            return base.GetBlockHighlightShape(we);
+        }
+
         public override List<BlockPos> GetBlockHighlights(WorldEdit worldEdit)
         {
+            if (brushPositions.Length > 300000)
+            {
+                return new List<BlockPos>() { new BlockPos(-size.X/2, -size.Y/2, -size.Z/2), new BlockPos(size.X / 2, size.Y / 2, size.Z / 2) };
+            }
             return new List<BlockPos>(brushPositions);
         }
         

@@ -113,9 +113,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public virtual List<int> GetBlockHighlightColors(WorldEdit worldEdit) { return new List<int>(new int[] {
             ColorUtil.ToRgba(48, (int)(GuiStyle.DialogDefaultBgColor[2] * 255), (int)(GuiStyle.DialogDefaultBgColor[1] * 255), (int)(GuiStyle.DialogDefaultBgColor[0] * 255))
-        } ); } 
+        } ); }
 
-
+        public virtual EnumHighlightShape GetBlockHighlightShape(WorldEdit we)
+        {
+            return EnumHighlightShape.Arbitrary;
+        }
     }
 }
 
