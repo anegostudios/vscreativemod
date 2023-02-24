@@ -1,19 +1,80 @@
 ﻿using Newtonsoft.Json;
 using ProtoBuf;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
+
+    public class GuiDialogConfirmAcceptFile : GuiDialog
+    {
+        string text;
+        Action<string> DidPressButton;
+        public override double DrawOrder => 2;
+
+        static int index = 0;
+
+        public override string ToggleKeyCombinationCode
+        {
+            get { return null; }
+        }
+
+
+        public GuiDialogConfirmAcceptFile(ICoreClientAPI capi, string text, Action<string> DidPressButton) : base(capi)
+        {
+            this.text = text;
+            this.DidPressButton = DidPressButton;
+            Compose();
+        }
+
+        private void Compose()
+        {
+            ElementBounds textBounds = ElementStdBounds.Rowed(0.4f, 0, EnumDialogArea.LeftFixed).WithFixedWidth(500);
+            ElementBounds bgBounds = ElementStdBounds.DialogBackground().WithFixedPadding(GuiStyle.ElementToDialogPadding, GuiStyle.ElementToDialogPadding);
+            TextDrawUtil util = new TextDrawUtil();
+            CairoFont font = CairoFont.WhiteSmallText();
+
+            float y = (float)util.GetMultilineTextHeight(font, text, textBounds.fixedWidth);
+
+            SingleComposer =
+                capi.Gui
+                .CreateCompo("confirmdialog-" + (index++), ElementStdBounds.AutosizedMainDialog)
+                .AddShadedDialogBG(bgBounds, true)
+                .AddDialogTitleBar(Lang.Get("Please Confirm"), OnTitleBarClose)
+                .BeginChildElements(bgBounds)
+                    .AddStaticText(text, font, textBounds)
+
+                    .AddSmallButton(Lang.Get("Ignore all files"), () => { DidPressButton("ignore"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(6), EnumButtonStyle.Normal)
+                    .AddSmallButton(Lang.Get("Accept file"), () => { DidPressButton("accept"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6), EnumButtonStyle.Normal)
+                    .AddSmallButton(Lang.Get("Accept next 10 files"), () => { DidPressButton("accept10"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6).WithFixedAlignmentOffset(-100, 0), EnumButtonStyle.Normal)
+                .EndChildElements()
+                .Compose()
+            ;
+        }
+
+        private void OnTitleBarClose()
+        {
+            TryClose();
+        }
+
+        public override void OnGuiOpened()
+        {
+            Compose();
+            base.OnGuiOpened();
+        }
+
+    }
+
+
+
     public class WorldEditClientHandler
     {
         public ICoreClientAPI capi;
@@ -27,7 +88,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         JsonDialogSettings toolOptionsSettings;
 
         IClientNetworkChannel clientChannel;
-        WorldEditWorkspace ownWorkspace;
+        public WorldEditWorkspace ownWorkspace;
 
         bool isComposing;
         bool beforeAmbientOverride;
@@ -40,14 +101,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
             capi.Event.LeaveWorld += Event_LeaveWorld;
             capi.Event.FileDrop += Event_FileDrop;
+            capi.Input.InWorldAction += Input_InWorldAction;
 
             clientChannel =
-                capi.Network.RegisterChannel("worldedit")
-                .RegisterMessageType(typeof(RequestWorkSpacePacket))
-                .RegisterMessageType(typeof(WorldEditWorkspace))
-                .RegisterMessageType(typeof(ChangePlayerModePacket))
-                .RegisterMessageType(typeof(CopyToClipboardPacket))
-                .RegisterMessageType(typeof(SchematicJsonPacket))
+                capi.Network.GetChannel("worldedit")
                 .SetMessageHandler<WorldEditWorkspace>(OnServerWorkspace)
                 .SetMessageHandler<CopyToClipboardPacket>(OnClipboardCopy)
                 .SetMessageHandler<SchematicJsonPacket>(OnReceivedSchematic)
@@ -60,20 +117,97 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         }
 
+        private void Input_InWorldAction(EnumEntityAction action, bool on, ref EnumHandling handled)
+        {
+            if (on && ownWorkspace?.ToolsEnabled == true && ownWorkspace.ToolName == "chiselbrush" && (action == EnumEntityAction.InWorldLeftMouseDown || action == EnumEntityAction.InWorldRightMouseDown))
+            {
+                var blockSel = capi.World.Player.CurrentBlockSelection;
+
+                handled = EnumHandling.PreventDefault;
+                clientChannel.SendPacket(new WorldInteractPacket()
+                {
+                    Position = blockSel.Position,
+                    DidOffset = blockSel.DidOffset,
+                    Face = blockSel.Face.Index,
+                    HitPosition = blockSel.HitPosition,
+                    SelectionBoxIndex = blockSel.SelectionBoxIndex,
+                    Mode = action == EnumEntityAction.InWorldLeftMouseDown ? 0 : 1
+                });
+            }
+        }
+
+        Queue<SchematicJsonPacket> receievedSchematics = new Queue<SchematicJsonPacket>();
+        GuiDialogConfirmAcceptFile acceptDlg;
         private void OnReceivedSchematic(SchematicJsonPacket message)
         {
-            bool allow = capi.Settings.Bool["allowSaveFilesFromServer"];
+            int allowCount = capi.Settings.Int["allowSaveFilesFromServer"];
 
-            if (!allow)
+            if (allowCount > 0)
             {
-                capi.ShowChatMessage("Server tried to send a schematic file, but it was rejected for safety reasons. To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!");
+                receiveFile(message);
                 return;
             }
 
+            receievedSchematics.Enqueue(message);
+
+            if (allowCount == 0)
+            {
+                if ((acceptDlg == null || !acceptDlg.IsOpened()))
+                {
+                    capi.ShowChatMessage("Server tried to send a schematic file, please confirm."); //To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!
+                    acceptDlg = new GuiDialogConfirmAcceptFile(capi, Lang.Get("The server wants to send you a schematic file. Please confirm to accept the file.") + "\n\n" + Lang.Get("{0}.json ({1} Kb)", message.Filename, message.JsonCode.Length / 1024), (code) => onConfirm(code));
+                    acceptDlg.TryOpen();
+                }
+                return;
+            }
+
+            capi.ShowChatMessage("Server tried to send a schematic file, but it was ignored. To re-enable, set <a href=\"chattype://.clientconfig allowSaveFilesFromServer 0\">allowSaveFilesFromServer to 0</a>");
+        }
+
+
+        private void onConfirm(string code)
+        {
+            capi.Event.EnqueueMainThreadTask(() =>
+            {
+                if (code == "ignore") capi.Settings.Int["allowSaveFilesFromServer"] = -1;
+
+                if (code == "accept" || code == "accept10")
+                {
+                    if (code == "accept10")
+                    {
+                        capi.Settings.Int["allowSaveFilesFromServer"] = 10;
+                    }
+                    else
+                    {
+                        capi.Settings.Int["allowSaveFilesFromServer"] = 1;
+                    }
+
+                    var sdf = new Queue<SchematicJsonPacket>(receievedSchematics);
+                    receievedSchematics.Clear();
+                    while (sdf.Count > 0)
+                    {
+                        if (capi.Settings.Int["allowSaveFilesFromServer"] > 0)
+                        {
+                            receiveFile(sdf.Dequeue());
+                        }
+                        else
+                        {
+                            OnReceivedSchematic(sdf.Dequeue());
+                        }
+                    }
+                }
+            }, "acceptfiles");
+        }
+
+        private void receiveFile(SchematicJsonPacket message) 
+        { 
             try
             {
                 string exportFolderPath = capi.GetOrCreateDataPath("WorldEdit");
                 string outfilepath = Path.Combine(exportFolderPath, Path.GetFileName(message.Filename));
+#if DEBUG
+                outfilepath = Path.Combine(exportFolderPath, message.Filename); // Allows use of subfolders. I'm too chicken to allow this in release mode
+#endif
 
                 if (!outfilepath.EndsWith(".json"))
                 {
@@ -86,7 +220,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     textWriter.Close();
                 }
 
-                capi.ShowChatMessage(string.Format("Schematic file {0} received and saved", message.Filename));
+                capi.Settings.Int["allowSaveFilesFromServer"]--;
+                capi.ShowChatMessage(string.Format("Schematic file {0} received and saved. Accepting {1} more.", message.Filename, capi.Settings.Int["allowSaveFilesFromServer"]));
             }
             catch (IOException e)
             {
@@ -462,6 +597,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (toolOptionsDialog != null) toolOptionsDialog.TryClose();
 
             int index = Array.FindIndex(toolBarsettings.Rows[0].Elements[0].Values, w => w.Equals(toolname.ToLowerInvariant()));
+            if (index < 0) return;
+
             string code = toolBarsettings.Rows[0].Elements[0].Icons[index];
 
             toolOptionsDialog?.TryClose();
@@ -601,6 +738,23 @@ namespace Vintagestory.ServerMods.WorldEdit
     {
         public string Filename;
         public string JsonCode;
+    }
+
+    [ProtoContract]
+    public class WorldInteractPacket
+    {
+        [ProtoMember(1)]
+        public int Mode; // 0 = break, 1 = build
+        [ProtoMember(2)]
+        public BlockPos Position;
+        [ProtoMember(3)]
+        public int Face;
+        [ProtoMember(4)]
+        public Vec3d HitPosition;
+        [ProtoMember(5)]
+        public int SelectionBoxIndex;
+        [ProtoMember(6)]
+        public bool DidOffset;
     }
 
 

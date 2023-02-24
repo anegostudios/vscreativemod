@@ -38,10 +38,6 @@ namespace Vintagestory.ServerMods
             base.Start(api);
 
             api.RegisterItemClass("ItemMagicWand", typeof(ItemMagicWand));
-
-            api.RegisterBlockClass("BlockCommand", typeof(BlockCommand));
-
-            api.RegisterBlockEntityClass("BECommand", typeof(BlockEntityCommand));
         }
 
         public override void StartServerSide(ICoreServerAPI api)

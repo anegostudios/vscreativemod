@@ -200,7 +200,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
-            ba.SetHistoryStateBlock(pos.X, pos.Y, pos.Z, oldBlockId, ba.GetBlockId(pos));
+            ba.SetHistoryStateBlock(pos.X, pos.Y, pos.Z, oldBlockId, ba.GetBlock(pos).Id);
             ba.Commit();
         }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
@@ -144,15 +145,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!MagicSelect)
             {
-                BlockPos startPos = blockSelection.Position;
-
-                if (workspace.EndMarker != null)
-                {
-                    if (workspace.EndMarker.X <= startPos.X) startPos.X++;
-                    if (workspace.EndMarker.Y <= startPos.Y) startPos.Y++;
-                    if (workspace.EndMarker.Z <= startPos.Z) startPos.Z++;
-                }
-                
+                Vec3d startPos = blockSelection.Position.ToVec3d().Add(0.5,0.5,0.5);
                 worldEdit.SetStartPos(startPos);
             }
         }
@@ -166,23 +159,17 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (MagicSelect)
             {
                 Cuboidi sele = MagiSelect(blockSelection);
-                worldEdit.SetStartPos(sele.Start.AsBlockPos);
-                worldEdit.SetEndPos(sele.End.AsBlockPos);
+                worldEdit.SetStartPos(sele.Start.AsBlockPos.ToVec3d());
+                worldEdit.SetEndPos(sele.End.AsBlockPos.ToVec3d());
 
-                workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
+                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
             }
             else
             {
-                BlockPos endpos = blockSelection.Position.AddCopy(blockSelection.Face);
-                if (workspace.StartMarker != null)
-                {
-                    if (workspace.StartMarker.X <= endpos.X) endpos.X++;
-                    if (workspace.StartMarker.Y <= endpos.Y) endpos.Y++;
-                    if (workspace.StartMarker.Z <= endpos.Z) endpos.Z++;
-                }
-                worldEdit.SetEndPos(endpos);
+                Vec3d endPos = blockSelection.Position.ToVec3d().Add(0.5,0.5,0.5);
+                worldEdit.SetEndPos(endPos);
 
-                workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
+                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
             }
 
             base.OnInteractStart(worldEdit, blockSelection);
@@ -315,16 +302,19 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-
-        public override void OnSelected(WorldEdit worldEdit)
+        public override void Load(ICoreAPI api)
         {
-            worldEdit.SelectionMode(true);
+            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(true);
         }
 
-
-        public override void OnDeselected(WorldEdit worldEdit)
+        public override void Unload(ICoreAPI api)
         {
-            worldEdit.SelectionMode(false);
+            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(false);
+        }
+
+        public override void HighlightBlocks(IPlayer player, WorldEdit we, EnumHighlightBlocksMode mode)
+        {
+            we.sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, GetBlockHighlights(we), GetBlockHighlightColors(we), EnumHighlightBlocksMode.Absolute, GetBlockHighlightShape(we));
         }
 
 

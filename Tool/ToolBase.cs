@@ -65,7 +65,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (ApplyToolBuild(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack))
             {
-                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
+                if (oldBlockId >= 0) ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
                 ba.Commit();
             }
         }
@@ -90,6 +90,16 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
                 ba.Commit();
             }
+        }
+
+        public virtual void Load(ICoreAPI api)
+        {
+            
+        }
+
+        public virtual void Unload(ICoreAPI api)
+        {
+            
         }
 
         public virtual bool ApplyToolBuild(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
@@ -118,6 +128,11 @@ namespace Vintagestory.ServerMods.WorldEdit
         public virtual EnumHighlightShape GetBlockHighlightShape(WorldEdit we)
         {
             return EnumHighlightShape.Arbitrary;
+        }
+
+        public virtual void HighlightBlocks(IPlayer player, WorldEdit we, EnumHighlightBlocksMode mode)
+        {
+            we.sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, GetBlockHighlights(we), GetBlockHighlightColors(we), mode, GetBlockHighlightShape(we));
         }
     }
 }

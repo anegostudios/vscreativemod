@@ -50,7 +50,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
         };
 
-        BlockPos[] brushPositions;
+        protected BlockPos[] brushPositions;
 
         public virtual string Prefix { get { return "std.brush"; } }
 
@@ -387,7 +387,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             return PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
         }
 
-        public bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
+        public virtual bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
             if (BrushDim1 <= 0) return false;
 
             Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
@@ -403,7 +403,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
                 }
-
             }
 
             EnumBrushMode brushMode = BrushMode;

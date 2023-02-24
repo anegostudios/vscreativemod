@@ -37,10 +37,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.FloatValues["std.airBrushQuantity"] = value; }
         }
 
-        public EnumAirBrushMode Mode
+        public EnumAirBrushMode PlaceMode
         {
-            get { return (EnumAirBrushMode)workspace.IntValues["std.airBrushMode"]; }
-            set { workspace.IntValues["std.airBrushMode"] = (int)value; }
+            get { return (EnumAirBrushMode)workspace.IntValues["std.airBrushPlaceMode"]; }
+            set { workspace.IntValues["std.airBrushPlaceMode"] = (int)value; }
         }
 
         public EnumAirBrushApply Apply
@@ -49,12 +49,20 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.airBrushApply"] = (int)value; }
         }
 
+        public EnumBrushMode BrushMode
+        {
+            get { return (EnumBrushMode)workspace.IntValues["std.airBrushMode"]; }
+            set { workspace.IntValues["std.airBrushMode"] = (int)value; }
+        }
+
+
         public AirBrushTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
             if (!workspace.FloatValues.ContainsKey("std.airBrushRadius")) Radius = 8;
             if (!workspace.FloatValues.ContainsKey("std.airBrushQuantity")) Quantity = 10;
             if (!workspace.IntValues.ContainsKey("std.airBrushApply")) Apply = EnumAirBrushApply.AnyFace;
-            if (!workspace.IntValues.ContainsKey("std.airBrushMode")) Mode = EnumAirBrushMode.Add;
+            if (!workspace.IntValues.ContainsKey("std.airBrushPlaceMode")) PlaceMode = EnumAirBrushMode.Add;
+            if (!workspace.IntValues.ContainsKey("std.airBrushMode")) BrushMode = EnumBrushMode.ReplaceSelected;
 
             lcgRand = new LCGRandom(workspace.world.Seed);
         }
@@ -111,25 +119,45 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     return true;
 
-
                 case "tm":
-                    EnumAirBrushMode mode = EnumAirBrushMode.Add;
-
-                    if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
-                        if (Enum.IsDefined(typeof(EnumAirBrushMode), index))
+                        EnumBrushMode mode = EnumBrushMode.ReplaceSelected;
+
+                        if (args.Length > 1)
                         {
-                            mode = (EnumAirBrushMode)index;
+                            int index;
+                            int.TryParse(args[1], out index);
+                            if (Enum.IsDefined(typeof(EnumBrushMode), index))
+                            {
+                                mode = (EnumBrushMode)index;
+                            }
                         }
+
+                        BrushMode = mode;
+                        worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
+                        workspace.ResendBlockHighlights(worldEdit);
+                        return true;
                     }
 
-                    Mode = mode;
-                    worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
-                    workspace.ResendBlockHighlights(worldEdit);
-                    return true;
+                case "tmp":
+                    {
+                        EnumAirBrushMode mode = EnumAirBrushMode.Add;
 
+                        if (args.Length > 1)
+                        {
+                            int index;
+                            int.TryParse(args[1], out index);
+                            if (Enum.IsDefined(typeof(EnumAirBrushMode), index))
+                            {
+                                mode = (EnumAirBrushMode)index;
+                            }
+                        }
+
+                        PlaceMode = mode;
+                        worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
+                        workspace.ResendBlockHighlights(worldEdit);
+                        return true;
+                    }
 
 
                 case "ta":
@@ -174,6 +202,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             float radSq = Radius * Radius;
             float q = Quantity;
 
+            Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
             Block block = ba.GetBlock(blockSel.Position);
             if (isbreak) block = ba.GetBlock(0);
 
@@ -190,8 +219,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             HashSet<BlockPos> viablePositions = new HashSet<BlockPos>();
             BlockPos dpos, ddpos;
-            Block testblock;
-            EnumAirBrushMode mode = Mode;
+            Block hereBlock;
+            EnumAirBrushMode mode = PlaceMode;
+            var bmode = BrushMode;
 
             for (int dx = -xRadInt; dx <= xRadInt; dx++)
             {
@@ -202,8 +232,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         if (dx * dx + dy * dy + dz * dz > radSq) continue;
 
                         dpos = blockSel.Position.AddCopy(dx, dy, dz);
-                        testblock = ba.GetBlock(dpos);
-                        if (testblock.Replaceable >= 6000) continue;
+                        hereBlock = ba.GetBlock(dpos);
+                        if (hereBlock.Replaceable >= 6000 || (bmode == EnumBrushMode.ReplaceSelected && hereBlock.Id != selectedBlock.Id)) continue;
 
                         for (int i = 0; i < BlockFacing.NumberOfFaces; i++)
                         {
@@ -253,7 +283,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (oldBlockId >= 0)
             {
-                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
+                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlock(blockSel.Position).Id);
             }
 
             ba.Commit();

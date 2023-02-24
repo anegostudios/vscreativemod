@@ -31,12 +31,19 @@ namespace Vintagestory.ServerMods
             chunksize = api.WorldManager.ChunkSize;
 
             api.Event.ServerRunPhase(EnumServerRunPhase.ModsAndConfigReady, loadGamePre);
-            this.api.Event.ChunkColumnGeneration(OnChunkColumnGeneration, EnumWorldGenPass.Terrain, "superflat");
 
             if (!api.ModLoader.IsModEnabled("survival"))
             {
+                api.Event.InitWorldGenerator(initWorldGen, "superflat");
                 api.Event.MapRegionGeneration(OnMapRegionGen, "superflat");
             }
+
+            this.api.Event.ChunkColumnGeneration(OnChunkColumnGeneration, EnumWorldGenPass.Terrain, "superflat");
+        }
+
+        private void initWorldGen()
+        {
+            // Needed to set up "superflat" worldgen group
         }
 
         private void loadGamePre()
@@ -73,7 +80,7 @@ namespace Vintagestory.ServerMods
             api.WorldManager.SetSeaLevel(blockIds.Count);
         }
 
-        private void OnMapRegionGen(IMapRegion mapRegion, int regionX, int regionZ)
+        private void OnMapRegionGen(IMapRegion mapRegion, int regionX, int regionZ, ITreeAttribute chunkGenParams = null)
         {
             mapRegion.ClimateMap = new IntDataMap2D()
             {

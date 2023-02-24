@@ -96,11 +96,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             switch (MoveRepeatMode)
             {
-
                 case EnumMoveToolMode.MoveBlocks:
-                    worldedit.MoveArea(vec.X, vec.Y, vec.Z, workspace.StartMarker, workspace.EndMarker);
-                    workspace.StartMarker.Add(vec);
-                    workspace.EndMarker.Add(vec);
+                    worldedit.MoveArea(vec, workspace.StartMarker, workspace.EndMarker);
                     workspace.ResendBlockHighlights(worldedit);
                     break;
 
@@ -116,7 +113,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public override void OnInteractStart(WorldEdit worldEdit, BlockSelection blockSelection)
         {
-            if (blockSelection == null) return;
+            if (blockSelection == null || workspace.StartMarker == null || workspace.EndMarker == null) return;
 
             BlockPos center = (workspace.StartMarker + workspace.EndMarker) / 2;
             center.Y = Math.Min(workspace.StartMarker.Y, workspace.EndMarker.Y);

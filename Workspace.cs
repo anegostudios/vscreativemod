@@ -5,7 +5,6 @@ using System.IO;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
-using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -21,6 +20,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public BlockPos StartMarker;
         public BlockPos EndMarker;
+
+        public Vec3d StartMarkerExact;
+        public Vec3d EndMarkerExact;
+
         public int ImportAngle;
         public bool ImportFlipped;
         /// <summary>
@@ -88,10 +91,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             prevEndMarker = EndMarker?.Copy();
         }
 
-        public void SetTool(string toolname)
+        public void SetTool(string toolname, ICoreAPI api)
         {
             this.ToolName = toolname;
-            ToolInstance = ToolRegistry.InstanceFromType(toolname, this, revertableBlockAccess);
+            if (ToolInstance != null) ToolInstance.Unload(api);
+            if (toolname != null)
+            {
+                ToolInstance = ToolRegistry.InstanceFromType(toolname, this, revertableBlockAccess);
+                ToolInstance.Load(api);
+            }
         }
 
 
@@ -232,7 +240,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (!reader.ReadBoolean())
                 {
                     ToolName = reader.ReadString();
-                    SetTool(ToolName);
+                    SetTool(ToolName, world.Api);
                 }
 
                 ToolOffsetMode = (EnumToolOffsetMode)reader.ReadInt32();
@@ -269,14 +277,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             
             HighlightSelectedArea();
 
-            if (ToolsEnabled)
+            if (ToolsEnabled && ToolInstance != null)
             {
                 EnumHighlightBlocksMode mode = EnumHighlightBlocksMode.CenteredToSelectedBlock;
                 if (ToolOffsetMode == EnumToolOffsetMode.Attach) mode = EnumHighlightBlocksMode.AttachedToSelectedBlock;
-                if (ToolInstance != null)
-                {
-                    world.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, ToolInstance.GetBlockHighlights(we), ToolInstance.GetBlockHighlightColors(we), mode, ToolInstance.GetBlockHighlightShape(we));
-                }
+                ToolInstance.HighlightBlocks(player, we, mode);
             }
             else
             {

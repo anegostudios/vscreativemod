@@ -325,11 +325,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             blockData.Place(ba, worldEdit.sapi.World, originPos, ReplaceMode, worldEdit.ReplaceMetaBlocks);
 
             ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position));
+            blockData.PlaceDecors(ba, originPos);
             ba.Commit();
-            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos);
-            blockData.PlaceDecors(ba, originPos, true);
+            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
             ba.CommitBlockEntityData();
-
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);
             workspace.ResendBlockHighlights(worldEdit);

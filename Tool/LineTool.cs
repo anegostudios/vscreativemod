@@ -93,7 +93,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (LineMode == EnumLineStartPoint.LineStrip) startPos = destPos.Copy();
 
-            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
+            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlock(blockSel.Position).Id);
             ba.Commit();
         }
 

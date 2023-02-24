@@ -136,7 +136,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
 
                 case EnumRepeatToolMode.Repeat:
-                    worldedit.RepeatArea(workspace.GetMarkedMinPos(), workspace.GetMarkedMaxPos(), blockFacing, amount, selectNewArea, growToArea);
+                    worldedit.RepeatArea(workspace.GetMarkedMinPos(), workspace.GetMarkedMaxPos(), vec, amount, selectNewArea, growToArea);
                     break;
             }
         }
@@ -150,8 +150,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             center.Y = Math.Min(workspace.StartMarker.Y, workspace.EndMarker.Y);
 
             Vec3i offset = (blockSelection.Position - center).ToVec3i();
-            BlockFacing facing = BlockFacing.NORTH;
-            int amount = 1;
+            BlockFacing facing;
+            int amount;
 
             if (Math.Abs(offset.X) > Math.Abs(offset.Y))
             {

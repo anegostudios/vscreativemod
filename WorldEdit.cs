@@ -1,25 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Common.CommandAbbr;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
-using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
-
 
     public partial class WorldEdit : ModSystem
     {
         public ICoreServerAPI sapi;
 
-        WorldEditClientHandler clientHandler;
+        public WorldEditClientHandler clientHandler;
         IServerNetworkChannel serverChannel;
 
         Dictionary<string, WorldEditWorkspace> workspaces = new Dictionary<string, WorldEditWorkspace>();
@@ -27,9 +26,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         // Unpretty, but too lazy to type it over and over again ;-)
         IServerPlayer fromPlayer;
-        int groupId;
-        WorldEditWorkspace workspace;
-        
+        WorldEditWorkspace workspace; 
         string exportFolderPath;
 
 
@@ -37,7 +34,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             get
             {
-                object val = null;
+                object val;
                 sapi.ObjectCache.TryGetValue("donotResolveImports", out val);
 
                 if (val is bool)
@@ -55,6 +52,19 @@ namespace Vintagestory.ServerMods.WorldEdit
             ToolRegistry.RegisterDefaultTools();
         }
 
+        public override void Start(ICoreAPI api)
+        {
+            api.Network
+                .RegisterChannel("worldedit")
+                .RegisterMessageType(typeof(RequestWorkSpacePacket))
+                .RegisterMessageType(typeof(WorldEditWorkspace))
+                .RegisterMessageType(typeof(ChangePlayerModePacket))
+                .RegisterMessageType(typeof(CopyToClipboardPacket))
+                .RegisterMessageType(typeof(SchematicJsonPacket))
+                .RegisterMessageType(typeof(WorldInteractPacket))
+            ;
+        }
+
         public override void StartClientSide(ICoreClientAPI capi)
         {
             clientHandler = new WorldEditClientHandler(capi);
@@ -68,9 +78,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             sapi.Permissions.RegisterPrivilege("worldedit", "Ability to use world edit tools");
 
-            sapi.RegisterCommand("we", "World edit tools", "[ms|me|mc|mex|clear|mdelete|mfill|imp|impr|blu|brs|brm|ers|range|tool|on|off|undo|redo|sovp|block|...]", CmdEditServer, "worldedit");
+            registerCommands();
 
-            sapi.Event.PlayerJoin += OnPlayerJoin;
+            sapi.Event.PlayerNowPlaying += Event_PlayerNowPlaying;
 
             sapi.Event.PlayerSwitchGameMode += OnSwitchedGameMode;
 
@@ -80,16 +90,87 @@ namespace Vintagestory.ServerMods.WorldEdit
             sapi.Event.GameWorldSave += OnSave;
 
             serverChannel =
-                sapi.Network.RegisterChannel("worldedit")
-                .RegisterMessageType(typeof(RequestWorkSpacePacket))
-                .RegisterMessageType(typeof(WorldEditWorkspace))
-                .RegisterMessageType(typeof(ChangePlayerModePacket))
-                .RegisterMessageType(typeof(CopyToClipboardPacket))
-                .RegisterMessageType(typeof(SchematicJsonPacket))
+                sapi.Network.GetChannel("worldedit")
                 .SetMessageHandler<RequestWorkSpacePacket>(OnRequestWorkSpaceMessage)
                 .SetMessageHandler<ChangePlayerModePacket>(OnChangePlayerModeMessage)
                 .SetMessageHandler<SchematicJsonPacket>(OnReceivedSchematic)
+                .SetMessageHandler<WorldInteractPacket>(OnWorldInteract)
             ;
+
+            var cmdapi = sapi.ChatCommands;
+            var parsers = sapi.ChatCommands.Parsers;
+            cmdapi
+                .GetOrCreate("land")
+                .RequiresPrivilege(Privilege.chat)
+                .RequiresPlayer()
+                .BeginSub("claim")
+                    .BeginSub("download")
+                        .WithDesc("Download a claim of yours to your computer")
+                        .WithArgs(parsers.Int("claim id"))
+                        .HandleWith(downloadClaim)
+                    .EndSub()
+                .EndSub()
+            ;
+        }
+
+        private TextCommandResult downloadClaim(TextCommandCallingArgs args)
+        {
+            var plr = args.Caller.Player as IServerPlayer;
+            var ownclaims = sapi.WorldManager.SaveGame.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
+            int claimid = (int)args[0];
+            if (claimid < 0 || claimid >= ownclaims.Length)
+            {
+                return TextCommandResult.Error(Lang.Get("Incorrect claimid, you only have {0} claims", ownclaims.Length));
+            }
+            else
+            {
+                var claim = ownclaims[claimid];
+                var world = sapi.World;
+                BlockSchematic blockdata = new BlockSchematic();
+                BlockPos minPos = null;
+
+                foreach (var area in claim.Areas)
+                {
+                    blockdata.AddArea(world, area.Start.ToBlockPos(), area.End.ToBlockPos());
+
+                    if (minPos == null) minPos = area.Start.ToBlockPos();
+
+                    minPos.X = Math.Min(area.Start.X, minPos.X);
+                    minPos.Y = Math.Min(area.Start.Y, minPos.Y);
+                    minPos.Z = Math.Min(area.Start.Z, minPos.Z);
+                }
+
+                blockdata.Pack(world, minPos);
+                
+                serverChannel.SendPacket(new SchematicJsonPacket() {
+                    Filename = "claim-"+GamePaths.ReplaceInvalidChars(claim.Description), 
+                    JsonCode = blockdata.ToJson() }, plr);
+
+                return TextCommandResult.Success(Lang.Get("Ok, claim sent"));
+            }
+        }
+
+
+        private void OnWorldInteract(IServerPlayer fromPlayer, WorldInteractPacket packet)
+        {
+            BlockSelection blockSel = new BlockSelection()
+            {
+                SelectionBoxIndex = packet.SelectionBoxIndex,
+                DidOffset = packet.DidOffset,
+                Face = BlockFacing.ALLFACES[packet.Face],
+                Position = packet.Position,
+                HitPosition = packet.HitPosition
+            };
+
+            if (packet.Mode == 1)
+            {
+                OnDidBuildBlock(fromPlayer, -1, blockSel, fromPlayer.InventoryManager.ActiveHotbarSlot.Itemstack);
+            } else
+            {
+                var handle = EnumHandling.PassThrough;
+                float sdf = 1f;
+                OnBreakBlock(fromPlayer, blockSel, ref sdf, ref handle);
+            }
         }
 
         private void OnReceivedSchematic(IServerPlayer fromPlayer, SchematicJsonPacket networkMessage)
@@ -120,7 +201,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             IServerPlayer plr = fromPlayer as IServerPlayer;
 
             bool freeMoveAllowed =  plr.HasPrivilege(Privilege.freemove);
-            bool gameModeAllowed = plr.HasPrivilege(Privilege.gamemode);
             bool pickRangeAllowed = plr.HasPrivilege(Privilege.pickingrange);
 
             if (plrmode.axisLock != null)
@@ -148,7 +228,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public WorldEditWorkspace GetWorkSpace(string playerUid)
         {
-            WorldEditWorkspace space = null;
+            WorldEditWorkspace space;
             workspaces.TryGetValue(playerUid, out space);
             return space;
         }
@@ -166,19 +246,18 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void OnSwitchedGameMode(IServerPlayer player)
         {
-            if (player.WorldData.CurrentGameMode != EnumGameMode.Creative)
-            {
+            if (player.WorldData.CurrentGameMode == EnumGameMode.Creative) return;
 
-                WorldEditWorkspace workspace = GetOrCreateWorkSpace(player);
-                workspace.ToolsEnabled = false;
-                workspace.StartMarker = null;
-                workspace.EndMarker = null;
-                fromPlayer = player;
-                workspace.ResendBlockHighlights(this);
-            }
+            WorldEditWorkspace workspace = GetOrCreateWorkSpace(player);
+            workspace.ToolsEnabled = false;
+            workspace.StartMarker = null;
+            workspace.EndMarker = null;
+            fromPlayer = player;
+            workspace.ResendBlockHighlights(this);
         }
 
-        private void OnPlayerJoin(IPlayer player)
+
+        private void Event_PlayerNowPlaying(IServerPlayer player)
         {
             fromPlayer = player as IServerPlayer;
 
@@ -192,17 +271,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ToolRegistry.InstanceFromType(val.Key, workspace, revertableBlockAccess);
             }
 
-
             if (workspace.ToolsEnabled)
             {
-                if (workspace.ToolInstance != null)
-                {
-                    EnumHighlightBlocksMode mode = EnumHighlightBlocksMode.CenteredToSelectedBlock;
-                    if (workspace.ToolOffsetMode == EnumToolOffsetMode.Attach) mode = EnumHighlightBlocksMode.AttachedToSelectedBlock;
-
-                    sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, workspace.ToolInstance.GetBlockHighlights(this), workspace.ToolInstance.GetBlockHighlightColors(this), mode);
-                }
-
+                workspace.ToolInstance.Load(sapi);
+                workspace.ResendBlockHighlights(this);
+                SendPlayerWorkSpace(player.PlayerUID);
             }
             else
             {
@@ -296,660 +369,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
 
 
-
-
-        private void CmdEditServer(IServerPlayer player, int groupId, CmdArgs args)
-        {
-            this.fromPlayer = player;
-            this.groupId = groupId;
-
-            if (!CanUseWorldEdit(player, true)) return;
-
-            this.workspace = GetOrCreateWorkSpace(player);
-
-
-            BlockPos centerPos = player.Entity.Pos.AsBlockPos;
-            IPlayerInventoryManager plrInv = player.InventoryManager;
-            ItemStack stack = plrInv.ActiveHotbarSlot.Itemstack;
-
-
-            if (args.Length == 0)
-            {
-                Bad("No arguments supplied. Check the wiki for help, or did you mean to type .we?");
-                return;
-            }
-
-            string cmd = args.PopWord();
-
-
-            if ((cmd == "tr" || cmd == "tsx" || cmd == "tsy" || cmd == "tsz") && args.Length > 0)
-            {
-                double val = 0;
-                if (double.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out val))
-                {
-                    if (val > 50 && workspace.serverOverloadProtection)
-                    {
-                        Bad("Operation rejected. Server overload protection is on. Might kill the server or client to use such a large brush (max is 50).");
-
-                        SendPlayerWorkSpace(fromPlayer.PlayerUID);
-
-                        return;
-                    }
-                }
-            }
-
-            switch (cmd)
-            {
-                case "impr":
-                    int angle = 90;
-
-                    if (args.Length > 0)
-                    {
-                        if (!int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out angle))
-                        {
-                            Bad("Invalid Angle (not a number)");
-                            break;
-                        }
-                    }
-                    if (angle < 0) angle += 360;
-
-                    if (angle != 0 && angle != 90 && angle != 180 && angle != 270)
-                    {
-                        Bad("Invalid Angle, allowed values are -270, -180, -90, 0, 90, 180 and 270");
-                        break;
-                    }
-
-                    workspace.ImportAngle = angle;
-
-                    Good("Ok, set rotation to " + angle + " degrees");
-
-                    break;
-
-                case "impflip":
-                    workspace.ImportFlipped = !workspace.ImportFlipped;
-
-                    Good("Ok, import data flip " + (workspace.ImportFlipped ? "on" : "off"));
-
-                    break;
-
-
-                case "mcopy":
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Please mark start and end position");
-                        break;
-                    }
-
-                    workspace.clipboardBlockData = CopyArea(workspace.StartMarker, workspace.EndMarker);
-                    Good(Lang.Get("{0} blocks and {1} entities copied", workspace.clipboardBlockData.BlockIds.Count, workspace.clipboardBlockData.EntitiesUnpacked.Count));
-                    break;
-
-                case "mposcopy":
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Please mark start and end position");
-                        break;
-                    }
-
-                    BlockPos s = workspace.StartMarker;
-                    BlockPos e = workspace.EndMarker;
-
-                    serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark {0} {1} {2} {3} {4} {5}", s.X, s.Y, s.Z, e.X, e.Y, e.Z) }, player);
-
-                    break;
-
-                case "mpaste":
-                    if (workspace.clipboardBlockData == null)
-                    {
-                        Bad("No copied block data to paste");
-                        break;
-                    }
-
-                    PasteBlockData(workspace.clipboardBlockData, workspace.StartMarker, EnumOrigin.StartPos);
-                    Good(workspace.clipboardBlockData.BlockIds.Count + " blocks pasted");
-                    break;
-
-
-                case "cpinfo":
-                    if (workspace.clipboardBlockData == null)
-                    {
-                        Bad("No schematic in the clipboard");
-                        break;
-                    }
-
-                    workspace.clipboardBlockData.Init(workspace.revertableBlockAccess);
-                    workspace.clipboardBlockData.LoadMetaInformationAndValidate(workspace.revertableBlockAccess, workspace.world, "(from clipboard)");
-
-                    string sides = "";
-                    for (int i = 0; i < workspace.clipboardBlockData.PathwayStarts.Length; i++)
-                    {
-                        if (sides.Length > 0) sides += ",";
-                        sides += workspace.clipboardBlockData.PathwaySides[i].Code + " (" + workspace.clipboardBlockData.PathwayOffsets[i].Length + " blocks)";
-                    }
-                    if (sides.Length > 0) sides = "Found " + workspace.clipboardBlockData.PathwayStarts.Length + " pathways: " + sides;
-
-                    Good("{0} blocks in clipboard. {1}", workspace.clipboardBlockData.BlockIds.Count, sides);
-                    break;
-
-
-                case "block":
-                    if (stack == null || stack.Class == EnumItemClass.Item)
-                    {
-                        Bad("Please put the desired block in your active hotbar slot");
-                        return;
-                    }
-
-                    sapi.World.BlockAccessor.SetBlock(stack.Id, centerPos.DownCopy());
-
-                    Good("Block placed");
-
-                    break;
-
-
-                case "relight":
-                    workspace.DoRelight = (bool)args.PopBool(true);
-                    workspace.revertableBlockAccess.Relight = workspace.DoRelight;
-                    Good("Block relighting now " + ((workspace.DoRelight) ? "on" : "off"));
-                    break;
-
-                case "sovp":
-
-                    if (args.Length > 0)
-                    {
-                        if (!fromPlayer.HasPrivilege(Privilege.controlserver))
-                        {
-                            Bad("controlserver privilege required to change server overload protection flag");
-                            break;
-                        }
-                        workspace.serverOverloadProtection = (bool)args.PopBool(true);
-                    }
-
-                    Good("Server overload protection " + (workspace.serverOverloadProtection ? "on" : "off"));
-                    break;
-
-                case "undo":
-                    HandleHistoryChange(args, false);
-                    break;
-
-                case "redo":
-                    HandleHistoryChange(args, true);
-                    break;
-
-
-                case "on":
-                    Good("World edit tools now enabled");
-                    workspace.ToolsEnabled = true;
-                    workspace.ResendBlockHighlights(this);
-                    break;
-
-
-                case "off":
-                    Good("World edit tools now disabled");
-                    workspace.ToolsEnabled = false;
-                    workspace.ResendBlockHighlights(this);
-                    break;
-
-
-                case "rebuildrainmap":
-                    if (!player.HasPrivilege(Privilege.controlserver))
-                    {
-                        Bad("You lack the controlserver privilege to rebuild the rain map.");
-                        return;
-                    }
-
-                    Good("Ok, rebuilding rain map on all loaded chunks, this may take some time and lag the server");
-                    int rebuilt = RebuildRainMap();
-                    Good("Done, rebuilding {0} map chunks", rebuilt);
-                    break;
-
-
-                case "t":
-                    string toolname = null;
-                    string suppliedToolname = args.PopAll();
-
-                    if (suppliedToolname.Length > 0)
-                    {
-                        int toolId;
-                        if (int.TryParse(suppliedToolname, NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out toolId))
-                        {
-                            if (toolId < 0)
-                            {
-                                Good("World edit tools now disabled");
-                                workspace.ToolsEnabled = false;
-                                workspace.ResendBlockHighlights(this);
-                                return;
-                            }
-
-                            toolname = ToolRegistry.ToolTypes.GetKeyAtIndex(toolId);
-                        }
-                        else
-                        {
-                            foreach (string name in ToolRegistry.ToolTypes.Keys)
-                            {
-                                if (name.ToLowerInvariant().StartsWith(suppliedToolname.ToLowerInvariant()))
-                                {
-                                    toolname = name;
-                                    break;
-                                }
-
-                            }
-                        }
-                    }
-
-                    if (toolname == null)
-                    {
-                        Bad("No such tool '" + suppliedToolname + "' registered");
-                        break;
-                    }
-
-                    workspace.SetTool(toolname);
-
-                    Good(toolname + " tool selected");
-
-                    workspace.ToolsEnabled = true;
-                    workspace.ResendBlockHighlights(this);
-                    SendPlayerWorkSpace(fromPlayer.PlayerUID);
-                    break;
-
-
-                case "tom":
-                    EnumToolOffsetMode mode = EnumToolOffsetMode.Center;
-
-                    try
-                    {
-                        int index = 0;
-                        if (args.Length > 0)
-                        {
-                            index = args[0].ToInt(0);
-                        }
-                        mode = (EnumToolOffsetMode)index;
-                    }
-                    catch (Exception) { }
-
-                    workspace.ToolOffsetMode = mode;
-
-                    Good("Set tool offset mode " + mode);
-
-                    workspace.ResendBlockHighlights(this);
-                    break;
-
-
-                case "range":
-                    float pickingrange = GlobalConstants.DefaultPickingRange;
-
-                    if (args.Length > 0)
-                    {
-                        pickingrange = args[0].ToFloat(GlobalConstants.DefaultPickingRange);
-                    }
-
-                    fromPlayer.WorldData.PickingRange = pickingrange;
-                    fromPlayer.BroadcastPlayerData();
-
-                    Good("Picking range " + pickingrange + " set");
-                    break;
-
-
-                case "mex":
-                case "mexc":
-
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Please mark start and end position");
-                        break;
-                    }
-
-                    if (args.Length < 1)
-                    {
-                        Bad("Please provide a filename");
-                        break;
-                    }
-
-                    ExportArea(args[0], workspace.StartMarker, workspace.EndMarker, cmd == "mexc" ? fromPlayer : null);
-
-                    if (args.Length > 1 && args[1] == "c")
-                    {
-                        BlockPos st = workspace.StartMarker;
-                        BlockPos en = workspace.EndMarker;
-                        serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark {0} {1} {2} {3} {4} {5}\n/we mex {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0]) }, player);
-
-                    }
-                    break;
-
-
-                case "mre":
-
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Please mark start and end position");
-                        break;
-                    }
-
-                    Good("Relighting marked area, this may lag the server for a while...");
-
-                    sapi.WorldManager.FullRelight(workspace.StartMarker, workspace.EndMarker);
-
-                    Good("Ok, relighting complete");
-                    break;
-
-
-                case "mgencode":
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Please mark start and end position");
-                        break;
-                    }
-
-                    if (player.CurrentBlockSelection == null)
-                    {
-                        Bad("Please look at a block as well");
-                        break;
-                    }
-
-                    GenMarkedMultiblockCode(player);
-
-                    break;
-
-                case "imp":
-
-                    if (workspace.StartMarker == null)
-                    {
-                        Bad("Please mark a start position");
-                        break;
-                    }
-
-                    if (args.Length < 1)
-                    {
-                        Bad("Please provide a filename");
-                        break;
-                    }
-
-                    EnumOrigin origin = EnumOrigin.StartPos;
-
-                    if (args.Length > 1)
-                    {
-                        try
-                        {
-                            origin = (EnumOrigin)Enum.Parse(typeof(EnumOrigin), args[1]);
-                        }
-                        catch (Exception)
-                        {
-
-                        }
-                    }
-
-                    ImportArea(args[0], workspace.StartMarker, origin);
-                    break;
-
-
-                case "impres":
-                    if (args.Length == 0)
-                    {
-                        Good("Import item/block resolving currently " + (!sapi.ObjectCache.ContainsKey("donotResolveImports") || (bool)sapi.ObjectCache["donotResolveImports"] == false ? "on" : "off"));
-                    }
-                    else
-                    {
-                        bool doreplace = (bool)args.PopBool(ReplaceMetaBlocks);
-                        sapi.ObjectCache["donotResolveImports"] = !doreplace;
-                        Good("Import item/block resolving now globally " + (doreplace ? "on" : "off"));
-                    }
-
-
-
-                    break;
-
-
-                case "blu":
-                    BlockLineup(centerPos, args);
-                    Good("Block lineup created");
-                    break;
-
-
-                // Mark start
-                case "ms":
-                    SetStartPos(centerPos);
-                    break;
-
-
-                // Mark end
-                case "me":
-                    SetEndPos(centerPos);
-                    break;
-
-                case "mark":
-                    workspace.StartMarker = args.PopVec3i(null)?.AsBlockPos;
-                    workspace.EndMarker = args.PopVec3i(null)?.AsBlockPos;
-
-                    Good("Start and end position marked");
-                    EnsureInsideMap(workspace.EndMarker);
-                    workspace.HighlightSelectedArea();
-                    break;
-
-                case "gn":
-                    ModifyMarker(BlockFacing.NORTH, args);
-                    break;
-                case "ge":
-                    ModifyMarker(BlockFacing.EAST, args);
-                    break;
-                case "gs":
-                    ModifyMarker(BlockFacing.SOUTH, args);
-                    break;
-                case "gw":
-                    ModifyMarker(BlockFacing.WEST, args);
-                    break;
-                case "gu":
-                    ModifyMarker(BlockFacing.UP, args);
-                    break;
-                case "gd":
-                    ModifyMarker(BlockFacing.DOWN, args);
-                    break;
-
-
-                case "mr":
-                    HandleRotateCommand(args.PopInt(), args.PopWord());
-                    break;
-
-
-                case "mmirn":
-                    HandleMirrorCommand(BlockFacing.NORTH, args);
-                    break;
-                case "mmire":
-                    HandleMirrorCommand(BlockFacing.EAST, args);
-                    break;
-                case "mmirs":
-                    HandleMirrorCommand(BlockFacing.SOUTH, args);
-                    break;
-                case "mmirw":
-                    HandleMirrorCommand(BlockFacing.WEST, args);
-                    break;
-                case "mmiru":
-                    HandleMirrorCommand(BlockFacing.UP, args);
-                    break;
-                case "mmird":
-                    HandleMirrorCommand(BlockFacing.DOWN, args);
-                    break;
-
-                case "mrepn":
-                    HandleRepeatCommand(BlockFacing.NORTH, args);
-                    break;
-                case "mrepe":
-                    HandleRepeatCommand(BlockFacing.EAST, args);
-                    break;
-                case "mreps":
-                    HandleRepeatCommand(BlockFacing.SOUTH, args);
-                    break;
-                case "mrepw":
-                    HandleRepeatCommand(BlockFacing.WEST, args);
-                    break;
-                case "mrepu":
-                    HandleRepeatCommand(BlockFacing.UP, args);
-                    break;
-                case "mrepd":
-                    HandleRepeatCommand(BlockFacing.DOWN, args);
-                    break;
-
-                case "mmu":
-                    HandleMoveCommand(BlockFacing.UP, args);
-                    break;
-
-                case "mmd":
-                    HandleMoveCommand(BlockFacing.DOWN, args);
-                    break;
-
-                case "mmn":
-                    HandleMoveCommand(BlockFacing.NORTH, args);
-                    break;
-
-                case "mme":
-                    HandleMoveCommand(BlockFacing.EAST, args);
-                    break;
-
-                case "mms":
-                    HandleMoveCommand(BlockFacing.SOUTH, args);
-                    break;
-
-                case "mmw":
-                    HandleMoveCommand(BlockFacing.WEST, args);
-                    break;
-
-                case "mmby":
-                    HandleMoveCommand(null, args);
-                    break;
-
-
-
-                case "smu":
-                    HandleShiftCommand(BlockFacing.UP, args);
-                    break;
-
-                case "smd":
-                    HandleShiftCommand(BlockFacing.DOWN, args);
-                    break;
-
-                case "smn":
-                    HandleShiftCommand(BlockFacing.NORTH, args);
-                    break;
-
-                case "sme":
-                    HandleShiftCommand(BlockFacing.EAST, args);
-                    break;
-
-                case "sms":
-                    HandleShiftCommand(BlockFacing.SOUTH, args);
-                    break;
-
-                case "smw":
-                    HandleShiftCommand(BlockFacing.WEST, args);
-                    break;
-
-                case "smby":
-                    HandleShiftCommand(null, args);
-                    break;
-
-
-
-                // Marked clear
-                case "mc":
-                case "clear":
-                    workspace.StartMarker = null;
-                    workspace.EndMarker = null;
-                    Good("Marked positions cleared");
-                    workspace.ResendBlockHighlights(this);
-                    break;
-
-                // Marked info
-                case "minfo":
-                    int sizeX = Math.Abs(workspace.StartMarker.X - workspace.EndMarker.X);
-                    int sizeY = Math.Abs(workspace.StartMarker.Y - workspace.EndMarker.Y);
-                    int sizeZ = Math.Abs(workspace.StartMarker.Z - workspace.EndMarker.Z);
-
-                    Good(string.Format("Marked area is a cuboid of size {0}x{1}x{2} or a total of {3:n0} blocks", sizeX, sizeY, sizeZ, ((long)sizeX * sizeY * sizeZ)));
-
-                    break;
-
-                // Fill marked
-                case "mfill":
-                    if (workspace.StartMarker == null || workspace.EndMarker == null)
-                    {
-                        Bad("Start marker or end marker not set");
-                        return;
-                    }
-
-
-
-                    if (stack == null || stack.Class == EnumItemClass.Item)
-                    {
-                        Bad("Please put the desired block in your active hotbar slot");
-                        return;
-                    }
-
-                    int filled = FillArea(stack, workspace.StartMarker, workspace.EndMarker);
-
-                    Good(filled + " marked blocks placed");
-                    break;
-
-                case "mclear":
-                    {
-                        Bad("No such function, did you mean mdelete?");
-                        return;
-                    }
-
-                // Clear marked
-                case "mdelete":
-                    {
-                        if (workspace.StartMarker == null || workspace.EndMarker == null)
-                        {
-                            Bad("Start marker or end marker not set");
-                            return;
-                        }
-
-                        int cleared = FillArea(null, workspace.StartMarker, workspace.EndMarker);
-                        Good(cleared + " marked blocks removed");
-                    }
-                    break;
-
-                // Clear area
-                case "delete":
-                    {
-                        if (args.Length < 1)
-                        {
-                            Bad("Missing size param");
-                            return;
-                        }
-
-                        int size = 0;
-                        if (!int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size))
-                        {
-                            Bad("Invalide size param");
-                            return;
-                        }
-
-                        int height = 20;
-                        if (args.Length > 1)
-                        {
-                            int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out height);
-                        }
-
-
-                        int cleared = FillArea(null, centerPos.AddCopy(-size, 0, -size), centerPos.AddCopy(size, height, size));
-
-                        Good(cleared + " Blocks removed");
-                    }
-
-                    break;
-
-                default:
-                    args.PushSingle(cmd);
-                    if (workspace.ToolInstance == null || !workspace.ToolInstance.OnWorldEditCommand(this, args))
-                    {
-                        Bad("No such function " + cmd + ". Maybe wrong tool selected?");
-                    }
-
-                    break;
-
-            }
-        }
-
-        private void GenMarkedMultiblockCode(IServerPlayer player)
+        private TextCommandResult GenMarkedMultiblockCode(IServerPlayer player)
         {
             BlockPos centerPos = player.CurrentBlockSelection.Position;
             OrderedDictionary<int, int> blocks = new OrderedDictionary<int, int>();
@@ -984,28 +404,47 @@ namespace Vintagestory.ServerMods.WorldEdit
             sb.AppendLine("\t]");
             sb.AppendLine("}");
 
-
             sapi.World.Logger.Notification("Multiblockstructure centered around {0}:\n{1}", centerPos, sb.ToString());
-
-            Good("Json code written to server-main.txt");
+            return TextCommandResult.Success("Json code written to server-main.txt");
         }
 
-        public void SetStartPos(BlockPos pos)
+        public TextCommandResult SetStartPos(Vec3d pos)
         {
-            workspace.StartMarker = pos;
-            Good("Start position " + workspace.StartMarker + " marked");
-            EnsureInsideMap(workspace.StartMarker);
-            workspace.HighlightSelectedArea();
-            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
+            workspace.StartMarkerExact = pos.Clone();
+            updateSelection();
+            return TextCommandResult.Success("Start position " + workspace.StartMarker + " marked");
         }
 
-        public void SetEndPos(BlockPos pos)
+        public TextCommandResult SetEndPos(Vec3d pos)
         {
-            workspace.EndMarker = pos;
-            Good("End position " + workspace.EndMarker + " marked");
-            EnsureInsideMap(workspace.EndMarker);
+            workspace.EndMarkerExact = pos.Clone();
+            updateSelection();
+            return TextCommandResult.Success("End position " + workspace.EndMarker + " marked");
+        }
+
+        void updateSelection()
+        {
+            if (workspace.StartMarkerExact != null && workspace.EndMarkerExact != null)
+            {
+                workspace.StartMarker = new BlockPos(
+                    (int)Math.Min(workspace.StartMarkerExact.X, workspace.EndMarkerExact.X),
+                    (int)Math.Min(workspace.StartMarkerExact.Y, workspace.EndMarkerExact.Y),
+                    (int)Math.Min(workspace.StartMarkerExact.Z, workspace.EndMarkerExact.Z)
+                );
+
+                workspace.EndMarker = new BlockPos(
+                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.X, workspace.EndMarkerExact.X)),
+                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.Y, workspace.EndMarkerExact.Y)),
+                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.Z, workspace.EndMarkerExact.Z))
+                );
+
+                EnsureInsideMap(workspace.StartMarker);
+                EnsureInsideMap(workspace.EndMarker);
+            }
+            
             workspace.HighlightSelectedArea();
-            workspace.revertableBlockAccess.StoreHistoryState(new List<BlockUpdate>());
+            workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
+            SendPlayerWorkSpace(workspace.PlayerUID);
         }
 
 
@@ -1072,36 +511,32 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public void SelectionMode(bool on)
         {
+            if (fromPlayer == null) return;
+
             fromPlayer.WorldData.AreaSelectionMode = on;
             fromPlayer.BroadcastPlayerData();
         }
 
-        private void HandleHistoryChange(CmdArgs args, bool redo)
+        private TextCommandResult HandleHistoryChange(TextCommandCallingArgs args, bool redo)
         {
             if (redo && workspace.revertableBlockAccess.CurrentyHistoryState == 0)
             {
-                Bad("Can't redo. Already on newest history state.");
-                return;
+                TextCommandResult.Error("Can't redo. Already on newest history state.");
             }
             if (!redo && workspace.revertableBlockAccess.CurrentyHistoryState == workspace.revertableBlockAccess.AvailableHistoryStates)
             {
-                Bad("Can't undo. Already on oldest available history state.");
-                return;
+                TextCommandResult.Error("Can't undo. Already on oldest available history state.");
             }
 
             int prevHstate = workspace.revertableBlockAccess.CurrentyHistoryState;
 
-            int steps = 1;
-            if (args.Length > 0)
-            {
-                int.TryParse(args[0], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out steps);
-            }
+            int steps = (int)args[0];
 
             workspace.revertableBlockAccess.ChangeHistoryState(steps * (redo ? -1 : 1));
 
             int quantityChanged = Math.Abs(prevHstate - workspace.revertableBlockAccess.CurrentyHistoryState);
 
-            Good(string.Format("Performed {0} {1} times.", redo ? "redo" : "undo", quantityChanged));
+            return TextCommandResult.Success(string.Format("Performed {0} {1} times.", redo ? "redo" : "undo", quantityChanged));
         }
 
 
@@ -1189,13 +624,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         private BlockSchematic CopyArea(BlockPos start, BlockPos end)
         {
             BlockPos startPos = new BlockPos(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Min(start.Z, end.Z));
-            BlockPos finalPos = new BlockPos(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y), Math.Max(start.Z, end.Z));
-
             BlockSchematic blockdata = new BlockSchematic();
-
             blockdata.AddArea(sapi.World, start, end);
             blockdata.Pack(sapi.World, startPos);
-
             return blockdata;
         }
 
@@ -1214,13 +645,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             rotated.Place(workspace.revertableBlockAccess, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
             workspace.revertableBlockAccess.Commit();
 
-            blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos);
-            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos, true);
+            blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
+            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos);
 
             workspace.revertableBlockAccess.CommitBlockEntityData();
         }
 
-        private void ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
+        private TextCommandResult ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
         {
             string infilepath = Path.Combine(exportFolderPath, filename);
             BlockSchematic blockData;
@@ -1230,16 +661,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             blockData = BlockSchematic.LoadFromFile(infilepath, ref error);
             if (blockData == null)
             {
-                Bad(error);
-                return;
+                return TextCommandResult.Error(error);
             }
 
-
             PasteBlockData(blockData, startPos, origin);
+            return TextCommandResult.Success(filename + " imported.");
         }
 
 
-        private void ExportArea(string filename, BlockPos start, BlockPos end, IServerPlayer sendToPlayer = null)
+        private TextCommandResult ExportArea(string filename, BlockPos start, BlockPos end, IServerPlayer sendToPlayer = null)
         {
             BlockSchematic blockdata = CopyArea(start, end);
             int exported = blockdata.BlockIds.Count;
@@ -1249,18 +679,18 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (sendToPlayer != null)
             {
                 serverChannel.SendPacket<SchematicJsonPacket>(new SchematicJsonPacket() { Filename = filename, JsonCode = blockdata.ToJson() }, sendToPlayer);
-                Good(exported + " blocks schematic sent to client.");
+                return TextCommandResult.Success(exported + " blocks schematic sent to client.");
             }
             else
             {
                 string error = blockdata.Save(outfilepath);
                 if (error != null)
                 {
-                    Good("Failed exporting: " + error);
+                    return TextCommandResult.Success("Failed exporting: " + error);
                 }
                 else
                 {
-                    Good(exported + " blocks exported.");
+                    return TextCommandResult.Success(exported + " blocks exported.");
                 }
             }
 
@@ -1298,12 +728,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public void Good(string message, params object[] args)
         {
-            fromPlayer.SendMessage(groupId, string.Format(message, args), EnumChatType.CommandSuccess);
+            fromPlayer.SendMessage(0, string.Format(message, args), EnumChatType.CommandSuccess);
         }
 
         public void Bad(string message, params object[] args)
         {
-            fromPlayer.SendMessage(groupId, string.Format(message, args), EnumChatType.CommandError);
+            fromPlayer.SendMessage(0, string.Format(message, args), EnumChatType.CommandError);
         }
 
     }

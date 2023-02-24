@@ -22,7 +22,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>6</LangVersion>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,7 +42,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>6</LangVersion>
+    <LangVersion>7.3</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -56,10 +56,6 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony, Version=2.2.2.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Lib.Harmony.2.2.2.0\lib\net45\0Harmony.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Lib\Newtonsoft.Json.dll</HintPath>
@@ -80,10 +76,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockEntity\BlockEntityCommand.cs" />
-    <Compile Include="Block\BlockCommand.cs" />
     <Compile Include="Core.cs" />
-    <Compile Include="Gui\GuiDialogBlockEntityCommand.cs" />
+    <Compile Include="dictionary.cs" />
     <Compile Include="Item\ItemMagicWand.cs" />
     <Compile Include="ShapeToPositionList.cs" />
     <Compile Include="Enums.cs" />
@@ -102,6 +96,7 @@
     <Compile Include="Tool\MoveTool.cs" />
     <Compile Include="Tool\SelectTool.cs" />
     <Compile Include="Tool\ToolBase.cs" />
+    <Compile Include="WorldEditCommands.cs" />
     <Compile Include="WorldGen\CreativeWorldGenConfig.cs" />
     <Compile Include="WorldGen\GenBlockLayersFlat.cs" />
     <Compile Include="WorldGen\GenLight.cs" />
@@ -125,6 +120,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="BlockEntity\" />
+    <Folder Include="Block\" />
+    <Folder Include="Gui\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

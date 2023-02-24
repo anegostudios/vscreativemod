@@ -56,7 +56,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             Block blockToPlace = ba.GetBlock(blockSel.Position);
             if (shrink) blockToPlace = ba.GetBlock(0);
 
-            int selectedBlockID = ba.GetBlockId(blockSel.Position.AddCopy(blockSel.Face.Opposite));
+            int selectedBlockID = ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)).Id;
 
             int radInt = (int)Math.Ceiling(BrushRadius);
             float radSq = BrushRadius * BrushRadius;

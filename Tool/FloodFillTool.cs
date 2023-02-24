@@ -35,12 +35,26 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.floodFillReplaceableLevel"] = value; }
         }
 
+        public bool IgnoreWater
+        {
+            get { return workspace.IntValues["std.ignoreWater"] > 0; }
+            set { workspace.IntValues["std.ignoreWater"] = value ? 1 : 0; }
+        }
+
+        public bool IgnorePlants
+        {
+            get { return workspace.IntValues["std.ignorePlants"] > 0; }
+            set { workspace.IntValues["std.ignorePlants"] = value ? 1 : 0; }
+        }
+
 
         public FloodFillTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
             if (!workspace.IntValues.ContainsKey("std.floodFillSearchRadius")) SearchRadius = 32;
-            if (!workspace.IntValues.ContainsKey("std.floodFillReplaceableLevel")) ReplaceableLevel = 6000;
-            if (!workspace.IntValues.ContainsKey("std.checkEnclosure")) CheckEnclosure = true; ;
+            if (!workspace.IntValues.ContainsKey("std.floodFillReplaceableLevel")) ReplaceableLevel = 9999;
+            if (!workspace.IntValues.ContainsKey("std.checkEnclosure")) CheckEnclosure = true;
+            if (!workspace.IntValues.ContainsKey("std.ignoreWater")) IgnoreWater = true;
+            if (!workspace.IntValues.ContainsKey("std.ignorePlants")) IgnorePlants = true;
             if (!workspace.IntValues.ContainsKey("std.mode")) Mode = 2;
         }
 
@@ -80,6 +94,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                         worldEdit.Good(workspace.ToolName + " mode set to " + Mode + "D");
                         return true;
                     }
+
+                case "iw":
+                    {
+                        IgnoreWater = (bool)args.PopBool(true);
+                        worldEdit.Good(workspace.ToolName + " IgnoreWater set to " + IgnoreWater);
+                        return true;
+                    }
+
+                case "ip":
+                    {
+                        IgnorePlants = (bool)args.PopBool(true);
+                        worldEdit.Good(workspace.ToolName + " IgnorePlants set to " + IgnorePlants);
+                        return true;
+                    }
             }
 
             return false;
@@ -109,7 +137,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             Block block = ba.GetBlock(pos);
             if (oldBlockId >= 0)
             {
-                worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
+                if (block.ForFluidsLayer)
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos, BlockLayersAccess.Fluid);
+                }
+                else
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
+                }
+
             } else
             {
                 block = worldEdit.sapi.World.GetBlock(0);
@@ -145,7 +181,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (Mode == 1) faces = BlockFacing.HORIZONTALS.Append(BlockFacing.DOWN);
 
             BlockPos curPos = new BlockPos();
-            
+
+            var ignWater = IgnoreWater;
+            var ignPlants = IgnorePlants;
+
+
             while (bfsQueue.Count > 0)
             {
                 Vec4i bpos = bfsQueue.Dequeue();
@@ -155,11 +195,17 @@ namespace Vintagestory.ServerMods.WorldEdit
                     curPos.Set(bpos.X + facing.Normali.X, bpos.Y + facing.Normali.Y, bpos.Z + facing.Normali.Z);
                     
                     Block block = ba.GetBlock(curPos);
+                    
                     bool inBounds = bpos.W < radius;
 
                     if (inBounds)
                     {
-                        if ((block.Replaceable >= repl || block.BlockMaterial == EnumBlockMaterial.Plant) && !fillablePositions.Contains(curPos)) 
+                        bool fillable =
+                            (ignWater || ba.GetBlock(curPos, BlockLayersAccess.Fluid).Id == 0) &&
+                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant)) && !fillablePositions.Contains(curPos)
+                        ;
+
+                        if (fillable) 
                         {
                             bfsQueue.Enqueue(new Vec4i(curPos.X, curPos.Y, curPos.Z, bpos.W + 1));
                             fillablePositions.Add(curPos.Copy());
@@ -184,7 +230,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
-            worldEdit.Bad(fillablePositions.Count + " blocks placed");
+            worldEdit.Good(fillablePositions.Count + " blocks placed");
         }
 
     }
