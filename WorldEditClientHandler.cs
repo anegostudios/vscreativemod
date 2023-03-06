@@ -161,7 +161,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return;
             }
 
-            capi.ShowChatMessage("Server tried to send a schematic file, but it was ignored. To re-enable, set <a href=\"chattype://.clientconfig allowSaveFilesFromServer 0\">allowSaveFilesFromServer to 0</a>");
+            capi.ShowChatMessage("Server tried to send a schematic file, but it was ignored as a precaution. To enable acceptance, set <a href=\"chattype://.clientconfig allowSaveFilesFromServer 1\">allowSaveFilesFromServer to 1</a>");
         }
 
 
