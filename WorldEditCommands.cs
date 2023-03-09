@@ -208,6 +208,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("mdeletewater")
                     .WithDesc("Deletes all water in selected area")
+                    .WithArgs(parsers.OptionalWord("liquidcode"))
                     .HandleWith(handleClearWater)
                 .EndSub()
                 .BeginSub("delete")
@@ -268,11 +269,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Start marker or end marker not set");
             }
 
+            string liquidCode = (args.Parsers[0].IsMissing ? "water" : args[0] as string);
+
             int corrected = 0;
             iterateOverSelection(pos =>
             {
                 var block = sapi.World.BlockAccessor.GetBlock(pos, BlockLayersAccess.Fluid);
-                if (block.LiquidCode == "water")
+                if (block.LiquidCode == liquidCode)
                 {
                     sapi.World.BlockAccessor.SetBlock(0, pos, BlockLayersAccess.Fluid);
                     corrected++;
@@ -289,14 +292,16 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Start marker or end marker not set");
             }
 
+            string liquidCode = (args.Parsers[0].IsMissing ? "water" : args[0] as string);
+
             int corrected = 0;
-            Block stillWater = sapi.World.GetBlock(new AssetLocation("water-still-7"));
+            Block stillWater = sapi.World.GetBlock(new AssetLocation(liquidCode + "-still-7"));
 
             iterateOverSelection(pos =>
             {
                 var block = sapi.World.BlockAccessor.GetBlock(pos, BlockLayersAccess.Fluid);
 
-                if (block.Id != stillWater.Id && block.LiquidCode == "water")
+                if (block.Id != stillWater.Id && block.LiquidCode == liquidCode)
                 {
                     sapi.World.BlockAccessor.SetBlock(stillWater.Id, pos, BlockLayersAccess.Fluid);
                     corrected++;
