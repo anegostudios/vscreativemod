@@ -100,8 +100,9 @@ namespace Vintagestory.ServerMods
         }
 
 
-        private void OnChunkColumnGeneration(IServerChunk[] chunks, int chunkX, int chunkZ, ITreeAttribute chunkGenParams = null)
+        private void OnChunkColumnGeneration(IChunkColumnGenerateRequest request)
         {
+            var chunks = request.Chunks;
             // Because blockdata is cached and not cleaned after release
             for (int y = 0; y < chunks.Length; y++)
             {

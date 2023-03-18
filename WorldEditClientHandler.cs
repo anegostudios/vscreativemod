@@ -101,6 +101,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
             capi.Event.LeaveWorld += Event_LeaveWorld;
             capi.Event.FileDrop += Event_FileDrop;
+            capi.Event.LevelFinalize += Event_LevelFinalize;
             capi.Input.InWorldAction += Input_InWorldAction;
 
             clientChannel =
@@ -114,7 +115,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 capi.Settings.Int["schematicMaxUploadSizeKb"] = 200;
             }
+        }
 
+        private void Event_LevelFinalize()
+        {
+            capi.Gui.Icons.CustomIcons["worldedit/chiselbrush"] = capi.Gui.Icons.SvgIconSource(new AssetLocation("textures/icons/worldedit/chiselbrush.svg"));
         }
 
         private void Input_InWorldAction(EnumEntityAction action, bool on, ref EnumHandling handled)
