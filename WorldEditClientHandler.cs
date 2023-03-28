@@ -226,7 +226,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
                 capi.Settings.Int["allowSaveFilesFromServer"]--;
-                capi.ShowChatMessage(string.Format("Schematic file {0} received and saved. Accepting {1} more.", message.Filename, capi.Settings.Int["allowSaveFilesFromServer"]));
+                capi.ShowChatMessage(string.Format("Schematic file <a href=\"datafolder://worldedit\">{0}.json</a> received and saved. Accepting {1} more.", message.Filename, capi.Settings.Int["allowSaveFilesFromServer"]));
             }
             catch (IOException e)
             {

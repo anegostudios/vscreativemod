@@ -18,8 +18,32 @@ namespace Vintagestory.ServerMods.WorldEdit
         BlockPos prevStartMarker;
         BlockPos prevEndMarker;
 
-        public BlockPos StartMarker;
-        public BlockPos EndMarker;
+        private BlockPos startMarker;
+        private BlockPos endMarker;
+
+        public BlockPos StartMarker { 
+            get
+            {
+                return startMarker;
+            } 
+            set
+            {
+                if (world != null) world.Api.ObjectCache["weStartMarker-" + PlayerUID] = value;
+                startMarker = value;
+            }
+        }
+        public BlockPos EndMarker
+        {
+            get
+            {
+                return endMarker;
+            }
+            set
+            {
+                if (world != null) world.Api.ObjectCache["weEndMarker-" + PlayerUID] = value;
+                endMarker = value;
+            }
+        }
 
         public Vec3d StartMarkerExact;
         public Vec3d EndMarkerExact;

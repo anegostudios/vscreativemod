@@ -204,6 +204,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("mpacifywater")
                     .WithDesc("Pacify water in selected area. Turns all flowing water block into still water.")
+                    .WithArgs(parsers.OptionalWord("liquid code (default: water)"))
                     .HandleWith(handlePacifyWater)
                 .EndSub()
                 .BeginSub("mdeletewater")
@@ -608,7 +609,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             IServerPlayer player = sendToClient ? args.Caller.Player as IServerPlayer : null;
 
-            if (args[1] as string == "C")
+            if ((args[1] as string)?.ToLowerInvariant() == "c")
             {
                 BlockPos st = workspace.StartMarker;
                 BlockPos en = workspace.EndMarker;
