@@ -412,14 +412,14 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             workspace.StartMarkerExact = pos.Clone();
             updateSelection();
-            return TextCommandResult.Success("Start position " + workspace.StartMarker + " marked");
+            return TextCommandResult.Success("Start position " + workspace.StartMarkerExact.AsBlockPos + " marked");
         }
 
         public TextCommandResult SetEndPos(Vec3d pos)
         {
             workspace.EndMarkerExact = pos.Clone();
             updateSelection();
-            return TextCommandResult.Success("End position " + workspace.EndMarker + " marked");
+            return TextCommandResult.Success("End position " + workspace.EndMarkerExact.AsBlockPos + " marked");
         }
 
         void updateSelection()
