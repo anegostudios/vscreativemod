@@ -109,6 +109,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                         .WithArgs(parsers.Int("claim id"))
                         .HandleWith(downloadClaim)
                     .EndSub()
+                    .BeginSub("export")
+                        .RequiresPrivilege("exportclaims")
+                        .WithDesc("Export a claim of yours to a file on the game server")
+                        .WithArgs(parsers.Int("claim id"))
+                        .HandleWith(exportClaim)
+                    .EndSub()
                 .EndSub()
             ;
         }
@@ -147,6 +153,42 @@ namespace Vintagestory.ServerMods.WorldEdit
                     JsonCode = blockdata.ToJson() }, plr);
 
                 return TextCommandResult.Success(Lang.Get("Ok, claim sent"));
+            }
+        }
+
+
+        private TextCommandResult exportClaim(TextCommandCallingArgs args)
+        {
+            var plr = args.Caller.Player as IServerPlayer;
+            var ownclaims = sapi.WorldManager.SaveGame.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
+            int claimid = (int)args[0];
+            if (claimid < 0 || claimid >= ownclaims.Length)
+            {
+                return TextCommandResult.Error(Lang.Get("Incorrect claimid, you only have {0} claims", ownclaims.Length));
+            }
+            else
+            {
+                var claim = ownclaims[claimid];
+                var world = sapi.World;
+                BlockSchematic blockdata = new BlockSchematic();
+                BlockPos minPos = null;
+
+                foreach (var area in claim.Areas)
+                {
+                    blockdata.AddArea(world, area.Start.ToBlockPos(), area.End.ToBlockPos());
+
+                    if (minPos == null) minPos = area.Start.ToBlockPos();
+
+                    minPos.X = Math.Min(area.Start.X, minPos.X);
+                    minPos.Y = Math.Min(area.Start.Y, minPos.Y);
+                    minPos.Z = Math.Min(area.Start.Z, minPos.Z);
+                }
+
+                blockdata.Pack(world, minPos);
+                string filename = "claim-" + claimid + "-" + GamePaths.ReplaceInvalidChars(plr.PlayerName) + ".json";
+                blockdata.Save(Path.Combine(exportFolderPath, filename));
+
+                return TextCommandResult.Success(Lang.Get("Ok, claim saved to file " + filename));
             }
         }
 
