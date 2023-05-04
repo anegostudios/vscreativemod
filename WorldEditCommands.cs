@@ -389,6 +389,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (!CanUseWorldEdit(args.Caller.Player, true)) return TextCommandResult.Error("Caller is not allowed to use world edit");
             this.workspace = GetOrCreateWorkSpace(args.Caller.Player);
+            this.fromPlayer = args.Caller.Player as IServerPlayer;
             return TextCommandResult.Success();
         }
 
