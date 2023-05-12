@@ -97,7 +97,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             this.capi = capi;
             capi.RegisterCommand("we", "World edit toolbar", "", CmdEditClient);
-            capi.Input.RegisterHotKey("worldedit", "World Edit", GlKeys.Tilde, HotkeyType.CreativeTool);
+            capi.Input.RegisterHotKey("worldedit", Lang.Get("World Edit"), GlKeys.Tilde, HotkeyType.CreativeTool);
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
             capi.Event.LeaveWorld += Event_LeaveWorld;
             capi.Event.FileDrop += Event_FileDrop;
