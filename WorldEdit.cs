@@ -563,11 +563,11 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (redo && workspace.revertableBlockAccess.CurrentyHistoryState == 0)
             {
-                TextCommandResult.Error("Can't redo. Already on newest history state.");
+                return TextCommandResult.Error("Can't redo. Already on newest history state.");
             }
             if (!redo && workspace.revertableBlockAccess.CurrentyHistoryState == workspace.revertableBlockAccess.AvailableHistoryStates)
             {
-                TextCommandResult.Error("Can't undo. Already on oldest available history state.");
+                return TextCommandResult.Error("Can't undo. Already on oldest available history state.");
             }
 
             int prevHstate = workspace.revertableBlockAccess.CurrentyHistoryState;
