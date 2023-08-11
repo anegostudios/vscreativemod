@@ -1,10 +1,8 @@
-﻿using Newtonsoft.Json;
-using ProtoBuf;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
+using Newtonsoft.Json;
+using ProtoBuf;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -294,7 +292,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void OnClipboardCopy(CopyToClipboardPacket msg)
         {
-            Clipboard.SetText(msg.Text);
+            capi.Forms.SetClipboardText(msg.Text);
             capi.World.Player.ShowChatNotification("Ok, copied to your clipboard");
         }
 
@@ -761,6 +759,4 @@ namespace Vintagestory.ServerMods.WorldEdit
         [ProtoMember(6)]
         public bool DidOffset;
     }
-
-
 }
