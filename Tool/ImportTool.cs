@@ -331,14 +331,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             ba.CommitBlockEntityData();
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);
-            workspace.ResendBlockHighlights(worldEdit);
+            //workspace.ResendBlockHighlights(worldEdit);
         }
 
 
         void SetRandomAngle(IWorldAccessor world)
         {
-            int rndAngle = rand.Next(4) * 90;
-
             for (int i = 0; i < blockDatas.Length; i++)
             {
                 blockDatas[i].TransformWhilePacked(world, EnumOrigin.BottomCenter, rand.Next(4) * 90, null);
@@ -351,16 +349,33 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 LoadBlockdatas(worldEdit.sapi, worldEdit);
             }
-            if (blockDatas.Length == 0) return new List<BlockPos>();
+            if (blockDatas.Length == 0)
+            {
+                worldEdit.previewBlocks.ClearChunks();
+                worldEdit.previewBlocks.UnloadUnusedServerChunks();
+                return new List<BlockPos>();
+            }
 
             BlockSchematic blockData = blockDatas[nextRnd];
 
             BlockPos origin = blockData.GetStartPos(new BlockPos(), Origin);
             BlockPos[] pos = blockData.GetJustPositions(origin);
 
+            if (pos.Length > 0) CreatePreview(blockData, origin, worldEdit);
+            else
+            {
+                worldEdit.previewBlocks.ClearChunks();
+                worldEdit.previewBlocks.UnloadUnusedServerChunks();
+            }
             return new List<BlockPos>(pos);
         }
 
-        
+        public virtual void CreatePreview(BlockSchematic blockData, BlockPos origin, WorldEdit worldEdit)
+        {
+            worldEdit.previewBlocks.ClearChunks();
+            var dim = worldEdit.CreateDimensionFromSchematic(blockData, origin, EnumOrigin.StartPos, worldEdit.previewBlocks);
+            worldEdit.previewBlocks.UnloadUnusedServerChunks();
+            worldEdit.SendPreviewOriginToClient(origin, dim.subDimensionId);
+        }
     }
 }

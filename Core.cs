@@ -38,6 +38,7 @@ namespace Vintagestory.ServerMods
             base.Start(api);
 
             api.RegisterItemClass("ItemMagicWand", typeof(ItemMagicWand));
+            api.RegisterEntity("EntityTestShip", typeof(EntityTestShip));
         }
 
         public override void StartServerSide(ICoreServerAPI api)

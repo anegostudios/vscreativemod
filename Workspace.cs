@@ -8,12 +8,20 @@ using Vintagestory.API.MathTools;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
+
+    public enum EnumWorldEditConstraint
+    {
+        None = 0,
+        Selection = 1
+    }
+
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class WorldEditWorkspace
     {
         public bool ToolsEnabled;
 
         public string PlayerUID;
+        public EnumWorldEditConstraint WorldEditConstraint;
 
         BlockPos prevStartMarker;
         BlockPos prevEndMarker;
@@ -67,12 +75,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         public Dictionary<string, string> StringValues = new Dictionary<string, string>();
         public Dictionary<string, byte[]> ByteDataValues = new Dictionary<string, byte[]>();
 
-
         public string ToolName = null;
-
         internal ToolBase ToolInstance;
         internal BlockSchematic clipboardBlockData;
-        
 
         public WorldEditWorkspace()
         {
@@ -300,6 +305,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             var player = world.PlayerByUid(PlayerUID);
             
             HighlightSelectedArea();
+            if (!(ToolInstance is ImportTool && ToolsEnabled))
+            {
+                we.previewBlocks.ClearChunks();
+                we.previewBlocks.UnloadUnusedServerChunks();
+            }
 
             if (ToolsEnabled && ToolInstance != null)
             {

@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
-using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -81,6 +76,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "down":
                     {
                         BlockFacing facing = BlockFacing.FromCode(cmd);
+                        Handle(worldEdit, facing.Normali);
+                        return true;
+                    }
+
+                case "look":
+                    {
+                        var player = worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
+                        var lookVec = player.Entity.SidedPos.GetViewVector();
+                        var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                         Handle(worldEdit, facing.Normali);
                         return true;
                     }

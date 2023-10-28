@@ -94,7 +94,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         public WorldEditClientHandler(ICoreClientAPI capi)
         {
             this.capi = capi;
-            capi.RegisterCommand("we", "World edit toolbar", "", CmdEditClient);
+            this.capi.ChatCommands.Create("we")
+                .WithDescription("World edit toolbar")
+                .HandleWith(CmdEditClient);
             capi.Input.RegisterHotKey("worldedit", Lang.Get("World Edit"), GlKeys.Tilde, HotkeyType.CreativeTool);
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
             capi.Event.LeaveWorld += Event_LeaveWorld;
@@ -107,6 +109,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .SetMessageHandler<WorldEditWorkspace>(OnServerWorkspace)
                 .SetMessageHandler<CopyToClipboardPacket>(OnClipboardCopy)
                 .SetMessageHandler<SchematicJsonPacket>(OnReceivedSchematic)
+                .SetMessageHandler<PreviewBlocksPacket>(OnReceivedPreviewBlocks)
             ;
 
             if (!capi.Settings.Int.Exists("schematicMaxUploadSizeKb"))
@@ -208,9 +211,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 string exportFolderPath = capi.GetOrCreateDataPath("WorldEdit");
                 string outfilepath = Path.Combine(exportFolderPath, Path.GetFileName(message.Filename));
-#if DEBUG
-                outfilepath = Path.Combine(exportFolderPath, message.Filename); // Allows use of subfolders. I'm too chicken to allow this in release mode
-#endif
+
+                if (capi.Settings.Bool["allowCreateFoldersFromServer"])
+                {
+                    outfilepath = Path.Combine(exportFolderPath, message.Filename);
+                    GamePaths.EnsurePathExists(new FileInfo(outfilepath).Directory.FullName);
+                }
+
 
                 if (!outfilepath.EndsWith(".json"))
                 {
@@ -224,7 +231,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
                 capi.Settings.Int["allowSaveFilesFromServer"]--;
-                capi.ShowChatMessage(string.Format("Schematic file <a href=\"datafolder://worldedit\">{0}.json</a> received and saved. Accepting {1} more.", message.Filename, capi.Settings.Int["allowSaveFilesFromServer"]));
+                capi.ShowChatMessage(
+                    $"Schematic file <a href=\"datafolder://worldedit\">{message.Filename}.json</a> received and saved. Accepting {capi.Settings.Int["allowSaveFilesFromServer"]} more.");
             }
             catch (IOException e)
             {
@@ -243,7 +251,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 bytes = info.Length;
             } catch (Exception ex)
             {
-                capi.TriggerIngameError(this, "importfailed", string.Format("Unable to import schematic: ", ex));
+                capi.TriggerIngameError(this, "importfailed", $"Unable to import schematic: {ex.Message}");
+                capi.Logger.Error(ex);
                 return;
             }
 
@@ -296,6 +305,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.World.Player.ShowChatNotification("Ok, copied to your clipboard");
         }
 
+        private void OnReceivedPreviewBlocks(PreviewBlocksPacket msg)
+        {
+            IMiniDimension dim = capi.World.GetOrCreateDimension(msg.dimId, msg.pos.ToVec3d());
+            dim.ClearChunks();
+            dim.PreviewPos = msg.pos;
+        }
+
         private void OnServerWorkspace(WorldEditWorkspace workspace)
         {
             ownWorkspace = workspace;
@@ -324,9 +340,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             return true;
         }
 
-        private void CmdEditClient(int groupId, CmdArgs args)
+        private TextCommandResult CmdEditClient(TextCommandCallingArgs args)
         {
             TriggerWorldEditDialog();
+            return TextCommandResult.Success();
         }
 
         private void TriggerWorldEditDialog()
@@ -385,7 +402,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             } catch (Exception e)
             {
-                capi.World.Logger.Error("Unable to load json dialogs: {0}", e);
+                capi.World.Logger.Error("Unable to load json dialogs:");
+                capi.World.Logger.Error(e);
             }
             
         }
@@ -735,6 +753,12 @@ namespace Vintagestory.ServerMods.WorldEdit
         public string Text;
     }
 
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
+    public class PreviewBlocksPacket
+    {
+        public BlockPos pos;
+        public int dimId;
+    }
 
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class SchematicJsonPacket

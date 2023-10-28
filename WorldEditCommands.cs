@@ -2,6 +2,7 @@
 using System.Globalization;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.CommandAbbr;
+using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -22,53 +23,74 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .RequiresPrivilege("worldedit")
                 .WithPreCondition(loadWorkSpace)
                 .WithDesc("Creative mode world editing tools")
-                .BeginSub("impr")
+                .BeginSub("import-rotation")
                     .WithDesc("Set data import angle")
+                    .WithAlias("impr")
                     .WithArgs(parsers.WordRange("angle", "-270", "-180", "-90", "0", "90", "180", "270"))
                     .HandleWith(handleImpr)
                 .EndSub()
-                .BeginSub("impflip")
+                .BeginSub("import-flip")
                     .WithDesc("Set data import flip mode")
+                    .WithAlias("impflip")
                     .HandleWith(handleImpflip)
                 .EndSub()
-                .BeginSub("mcopy")
+                .BeginSub("constrain")
+                    .WithDesc("Constrain all world edit operations")
+                    .WithAlias("cs")
+                    .WithArgs(parsers.WordRange("constraint type", "none", "selection"))
+                    .HandleWith(handleConstrain)
+                .EndSub()
+                .BeginSub("copy")
                     .WithDesc("Copy marked position to server clipboard")
+                    .WithAlias("mcopy").WithAlias("c")
                     .HandleWith(handleMcopy)
                 .EndSub()
-                .BeginSub("mposcopy")
+                .BeginSub("testlaunch")
+                    .WithDesc("Copy marked position to movable chunks (like a ship) and delete original")
+                    .HandleWith(handleLaunch)
+                .EndSub()
+                .BeginSub("scp")
                     .WithDesc("Copy a /we mark command text to your local clipboard")
+                    .WithAlias("mposcopy").WithAlias("selection-clipboard")
                     .HandleWith(handlemPosCopy)
                 .EndSub()
-                .BeginSub("mpaste")
+                .BeginSub("paste")
                     .WithDesc("Paste server clipboard data")
+                    .WithAlias("mpaste").WithAlias("p").WithAlias("v")
                     .HandleWith(handlemPaste)
                 .EndSub()
-                .BeginSub("cpinfo")
+                .BeginSub("cbi")
                     .WithDesc("Information about marked area in server clipoard")
-                    .HandleWith(handleCpInfo)
+                    .WithAlias("clipboard-info").WithAlias("cbinfo")
+                    .HandleWith(handleCbInfo)
                 .EndSub()
                 .BeginSub("block")
                     .WithDesc("Places a block below the caller")
+                    .WithAlias("b")
                     .HandleWith(handleBlock)
                 .EndSub()
                 .BeginSub("relight")
                     .WithDesc("Toggle server block relighting. Speeds up operations when doing large scale worldedits")
+                    .WithAlias("rl")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleRelight)
                 .EndSub()
-                .BeginSub("sovp")
+                .BeginSub("op")
                     .RequiresPrivilege(Privilege.controlserver)
+                    .WithAlias("overload-protection").WithAlias("sovp")
                     .WithDesc("Toggle server overload protection")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleSovp)
                 .EndSub()
                 .BeginSub("undo")
                     .WithDesc("Undo last world edit action")
+                    .WithAlias("u").WithAlias("z")
                     .WithArgs(parsers.OptionalInt("amount", 1))
                     .HandleWith(handleUndo)
                 .EndSub()
                 .BeginSub("redo")
                     .WithDesc("Redo last world edit action")
+                    .WithAlias("r").WithAlias("y")
                     .WithArgs(parsers.OptionalInt("amount", 1))
                     .HandleWith(handleRedo)
                 .EndSub()
@@ -80,153 +102,229 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithDesc("Disable world edit tool mode")
                     .HandleWith(handleToolModeOff)
                 .EndSub()
-                .BeginSub("rebuildrainmap")
+                .BeginSub("rebuild-rainmap")
                     .RequiresPrivilege(Privilege.controlserver)
+                    .WithAlias("rebuildrainmap").WithAlias("rrm")
                     .WithDesc("Rebuild rainheightmap on all loaded chunks")
                     .HandleWith(handleRebuildRainmap)
                 .EndSub()
-                .BeginSub("t")
+                .BeginSub("tool")
                     .WithDesc("Select world edit tool mode")
+                    .WithAlias("t")
                     .WithArgs(parsers.All("tool name"))
                     .HandleWith(handleSetTool)
                 .EndSub()
-                .BeginSub("tom")
+                .BeginSub("tool-offset")
                     .WithDesc("Set tool offset mode")
+                    .WithAlias("tom").WithAlias("to")
                     .WithArgs(parsers.Int("Mode index number"))
                     .HandleWith(handleTom)
                 .EndSub()
-                .BeginSub("range")
+                .BeginSub("pr")
                     .WithDesc("Set player picking range (default survival mode value is 4.5)")
+                    .WithAlias("player-reach").WithAlias("range")
                     .WithArgs(parsers.DoubleRange("range", 0, 9999))
                     .HandleWith(handleRange)
                 .EndSub()
-                .BeginSub("mex")
+                .BeginSub("export")
                     .WithDesc("Export marked area to server file system")
+                    .WithAlias("export").WithAlias("mexp")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("'c' to also copy mark command to client clipboard"))
                     .HandleWith(handleMex)
                 .EndSub()
-                .BeginSub("mexc")
+                .BeginSub("export-client")
                     .WithDesc("Export selected area to client file system")
+                    .WithAlias("mexc").WithAlias("expc")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("'c' to also copy mark command to client clipboard"))
                     .HandleWith(handleMexc)
                 .EndSub()
                 .BeginSub("mre")
                     .WithDesc("Relight selected area")
+                    .WithAlias("relight-selection").WithAlias("rls")
                     .HandleWith(handleRelightMarked)
                 .EndSub()
-                .BeginSub("mgencode")
+                .BeginSub("generate-multiblock-code")
                     .WithDesc("Generate multiblock code of selected area")
+                    .WithAlias("mgencode").WithAlias("gmc")
                     .HandleWith(handleMgenCode)
                 .EndSub()
-                .BeginSub("imp")
+                .BeginSub("import")
                     .WithDesc("Import schematic by filename to select area")
+                    .WithAlias("imp")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("origin mode"))
                     .HandleWith(handleImport)
                 .EndSub()
-                .BeginSub("impres")
+                .BeginSub("resolve-meta")
                     .WithDesc("Toggle resolve meta blocks mode during import")
+                    .WithAlias("impres").WithAlias("rm")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleToggleImpres)
                 .EndSub()
-                .BeginSub("blu")
-                    .WithDesc("Place every block type in the game")
-                    .HandleWith(handleBlu)
-                .EndSub()
-                .BeginSub("ms")
+                
+                .BeginSub("start")
                     .WithDesc("Mark start position for selection")
+                    .WithAlias("ms").WithAlias("s").WithAlias("1")
                     .HandleWith(handleMarkStart)
                 .EndSub()
-                .BeginSub("me")
+                .BeginSub("end")
                     .WithDesc("Mark end position for selection")
+                    .WithAlias("me").WithAlias("e").WithAlias("2")
                     .HandleWith(handleMarkEnd)
                 .EndSub()
-                .BeginSub("mark")
+                .BeginSub("select")
                     .WithDesc("Select area by coordinates")
+                    .WithAlias("mark")
                     .WithArgs(parsers.WorldPosition("start position"), parsers.WorldPosition("end position"))
                     .HandleWith(handleMark)
                 .EndSub()
-                .BeginSubs("gn", "ge", "gs", "gw", "gu", "gd")
-                    .WithDesc("Grow selection in given direction")
+                .BeginSub("resize")
+                    .WithDesc("Resize the current selection")
+                    .WithAlias("res")
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
+                    .HandleWith(handleResize)
+                .EndSub()
+                .BeginSubs("gn", "ge", "gs", "gw", "gu", "gd", "gl")
+                    .WithDesc("Grow selection in given direction (gl for look direction)")
                     .WithArgs(parsers.OptionalInt("amount", 1))
                     .HandleWith(handleGrowSelection)
                 .EndSub()
-                .BeginSub("mr")
+                .BeginSub("rotate")
                     .WithDesc("Rotate selected area")
+                    .WithAlias("mr").WithAlias("rot")
                     .WithArgs(parsers.WordRange("angle", "-270", "-180", "-90", "0", "90", "180", "270"))
                     .HandleWith(handleRotateSelection)
                 .EndSub()
+                .BeginSub("mirror")
+                    .WithDesc("Mirrors the current selection")
+                    .WithAlias("mir")
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }))
+                    .HandleWith(handleMirrorSelection)
+                .EndSub()
+                .BeginSub("flip")
+                    .WithDesc("Flip selected area in place")
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }))
+                    .HandleWith(handleFlipSelection)
+                .EndSub()
+
                 .BeginSubs("mmirn", "mmire", "mmirs", "mmirw", "mmiru", "mmird")
                     .WithDesc("Mirror selected area in given direction")
                     .WithArgs(parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
-                    .HandleWith(handleMirrorSelection)
+                    .HandleWith(handleMirrorShorthand)
+                .EndSub()
+                .BeginSub("repeat")
+                    .WithAlias("rep")
+                    .WithDesc("Repeat selected area in given direction")
+                    .WithArgs(
+                        parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), 
+                        parsers.OptionalInt("amount", 1), 
+                        parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn")
+                    )
+                    .HandleWith(handleRepeatSelection)
                 .EndSub()
                 .BeginSubs("mprepn", "mprepe", "mprepe", "mpreps", "mprepu", "mprepd")
                     .WithDesc("Repeat selected area in given direction")
                     .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
-                    .HandleWith(handleRepeatSelection)
+                    .HandleWith(handleRepeatShorthand)
+                .EndSub()
+                .BeginSub("move")
+                    .WithAlias("m")
+                    .WithDesc("Move selected area in given direction")
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
+                    .HandleWith(handleMoveSelection)
                 .EndSub()
                 .BeginSubs("mmn", "mme", "mms", "mms", "mmw", "mmu", "mmd")
                     .WithDesc("Move selected area in given direction")
                     .WithArgs(parsers.OptionalInt("amount", 1))
-                    .HandleWith(handleMoveSelection)
+                    .HandleWith(handleMoveSelectionShorthand)
                 .EndSub()
                 .BeginSub("mmby")
                     .WithDesc("Move selected area by given amount")
                     .WithArgs(parsers.IntDirection("direction"))
                     .HandleWith(handleMoveSelectionBy)
                 .EndSub()
+                .BeginSub("shift")
+                    .WithDesc("Shift current selection by given amount (does not move blocks, only the selection)")
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
+                    .HandleWith(handleShiftSelection)
+                .EndSub()
                 .BeginSubs("smn", "sme", "sms", "sms", "smw", "smu", "smd")
                     .WithDesc("Shift current selection in given direction")
                     .WithArgs(parsers.OptionalInt("amount", 1))
-                    .HandleWith(handleShiftSelection)
+                    .HandleWith(handleShiftSelectionShorthand)
                 .EndSub()
                 .BeginSub("smby")
                     .WithDesc("Shift current selection by given amount")
                     .WithArgs(parsers.IntDirection("direction"))
                     .HandleWith(handleShiftSelectionBy)
                 .EndSub()
-                .BeginSub("mc")
-                    .WithAlias("clear")
-                    .WithDesc("Clear current selection")
+                .BeginSub("clear")
+                    .WithAlias("mc").WithAlias("cs")
+                    .WithDesc("Clear current selection. Does not remove blocks, only the selection.")
                     .HandleWith(handleClearSelection)
                 .EndSub()
-                .BeginSub("minfo")
+                .BeginSub("info")
+                    .WithAlias("minfo").WithAlias("info-selection").WithAlias("is")
                     .WithDesc("Info about your current selection")
                     .HandleWith(handleSelectionInfo)
                 .EndSub()
-                .BeginSub("mfill")
-                    .WithDesc("Fill current selection with one type of block")
+                .BeginSub("fill")
+                    .WithAlias("mfill").WithAlias("f")
+                    .WithDesc("Fill current selection with the block you are holding")
                     .HandleWith(handleFillSelection)
                 .EndSub()
-                .BeginSub("mdelete")
-                    .WithDesc("Delete all contents inside your current selection")
+                .BeginSub("delete")
+                    .WithAlias("mdelete").WithAlias("del")
+                    .WithDesc("Delete all blocks and entities inside your current selection")
                     .HandleWith(handleDeleteSelection)
                 .EndSub()
-                .BeginSub("mpacifywater")
+                .BeginSub("pacify-water")
+                    .WithAlias("mpacifywater").WithAlias("pw")
                     .WithDesc("Pacify water in selected area. Turns all flowing water block into still water.")
                     .WithArgs(parsers.OptionalWord("liquid code (default: water)"))
                     .HandleWith(handlePacifyWater)
                 .EndSub()
-                .BeginSub("mdeletewater")
+                .BeginSub("deletewater")
+                    .WithAlias("delete-water").WithAlias("mdeletewater").WithAlias("delw")
                     .WithDesc("Deletes all water in selected area")
                     .WithArgs(parsers.OptionalWord("liquidcode"))
                     .HandleWith(handleClearWater)
                 .EndSub()
-                .BeginSub("delete")
+                .BeginSub("delete-nearby")
                     .WithDesc("Delete area around caller")
                     .WithArgs(parsers.Int("horizontal size"), parsers.Int("height"))
                     .HandleWith(handleDeleteArea)
                 .EndSub()
-                .BeginSub("fixbe")
+                .BeginSub("fix-blockentities")
+                    .WithAlias("fixbe")
                     .WithDesc("Fix incorrect block entities in selected areas")
                     .HandleWith(validateArea)
                 .EndSub()
-                 .BeginSub("replacemat")
+                .BeginSub("replace-material")
+                    .WithAlias("replacemat").WithAlias("repmat")
                     .RequiresPlayer()
                     .WithDesc("Replace a block material with another one, only if supported by the block (currently supported by support beams only). Uses the block in the players active slot as reference block type and target block material")
                     .HandleWith(onReplaceMaterial)
-                .EndSub();
+                .EndSub()
+                .Validate()
             ;
+        }
+
+        private TextCommandResult handleConstrain(TextCommandCallingArgs args)
+        {
+            workspace.WorldEditConstraint = (string)args[0] == "selection" ? EnumWorldEditConstraint.Selection : EnumWorldEditConstraint.None;
+            return TextCommandResult.Success("Constraint " + workspace.WorldEditConstraint + " set.");
+        }
+
+        private TextCommandResult handleMirrorShorthand(TextCommandCallingArgs args)
+        {
+            var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
+            return HandleMirrorCommand(BlockFacing.FromFirstLetter(dirchar), (string)args[0]);
+        }
+
+        private TextCommandResult handleMirrorSelection(TextCommandCallingArgs args)
+        {
+            var facing = blockFacingFromArg((string)args[0], args);
+            return HandleMirrorCommand(facing, "sn");
         }
 
         private TextCommandResult onReplaceMaterial(TextCommandCallingArgs args)
@@ -456,11 +554,22 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             return HandleShiftCommand((Vec3i)args[0]);
         }
-
         private TextCommandResult handleShiftSelection(TextCommandCallingArgs args)
         {
+            var direction = (string)args[0];
+            var facing = blockFacingFromArg(direction, args);
+            if (facing == null)
+            {
+                return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
+            }
+            return HandleShiftCommand(facing.Normali);
+        }
+
+        private TextCommandResult handleShiftSelectionShorthand(TextCommandCallingArgs args)
+        {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali);
+            var amount = args.Parsers[1].IsMissing ? 1 : (int)args[1];
+            return HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali.Clone() * amount);
         }
 
         private TextCommandResult handleMoveSelectionBy(TextCommandCallingArgs args)
@@ -470,31 +579,124 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult handleMoveSelection(TextCommandCallingArgs args)
         {
+            var direction = (string)args[0];
+            var amount = args.Parsers[1].IsMissing ? 1 : (int)args[1];
+            var facing = blockFacingFromArg(direction, args);
+            if (facing == null)
+            {
+                return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
+            }
+            return HandleMoveCommand(facing.Normali.Clone() * amount);
+        }
+
+        private TextCommandResult handleMoveSelectionShorthand(TextCommandCallingArgs args)
+        {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
             return HandleMoveCommand(BlockFacing.FromFirstLetter(dirchar).Normali);
         }
 
         private TextCommandResult handleRepeatSelection(TextCommandCallingArgs args)
         {
+            var direction = (string)args[0];
+            var facing = blockFacingFromArg(direction, args);
+            if (facing == null)
+            {
+                return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
+            }
+
+            return HandleRepeatCommand(facing.Normali, (int)args[1], (string)args[2]);
+        }
+
+        private TextCommandResult handleRepeatShorthand(TextCommandCallingArgs args)
+        {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
             return HandleRepeatCommand(BlockFacing.FromFirstLetter(dirchar).Normali, (int)args[0], (string)args[1]);
         }
 
-        private TextCommandResult handleMirrorSelection(TextCommandCallingArgs args)
-        {
-            var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return HandleMirrorCommand(BlockFacing.FromFirstLetter(dirchar), (string)args[0]);
-        }
 
         private TextCommandResult handleRotateSelection(TextCommandCallingArgs args)
         {
             return HandleRotateCommand(((string)args[0]).ToInt());
         }
 
+        private TextCommandResult handleFlipSelection(TextCommandCallingArgs args)
+        {
+            var direction = (string)args[0];
+            var facing = blockFacingFromArg(direction, args);
+            if (facing == null)
+            {
+                return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
+            }
+
+            return HandleFlipCommand(facing.Axis);
+        }
+
+        private TextCommandResult handleResize(TextCommandCallingArgs args)
+        {
+            var direction = (string)args[0];
+            var facing = blockFacingFromArg(direction, args);
+            if (facing == null)
+            {
+                return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
+            }
+
+            var amount = (int)args[1];
+            return ModifyMarker(facing, amount);
+        }
+
+        private BlockFacing blockFacingFromArg(string direction, TextCommandCallingArgs args)
+        {
+            BlockFacing facing = BlockFacing.FromFirstLetter(direction[0]);
+            if (facing != null) return facing;
+            
+            /// North: Negative Z
+            /// East: Positive X
+            /// South: Positive Z
+            /// West: Negative X
+            /// Up: Positive Y
+            /// Down: Negative Y
+            switch (direction)
+            {
+                case "+x":
+                case "x":
+                    facing = BlockFacing.EAST;
+                    break;
+                case "-x":
+                    facing = BlockFacing.WEST;
+                    break;
+                case "y":
+                case "+y":
+                    facing = BlockFacing.UP;
+                    break;
+                case "-y":
+                    facing = BlockFacing.DOWN;
+                    break;
+                case "+z":
+                case "z":
+                    facing = BlockFacing.SOUTH;
+                    break;
+                case "-z":
+                    facing = BlockFacing.NORTH;
+                    break;
+                case "l":
+                case "look":
+                    var lookVec = args.Caller.Entity.SidedPos.GetViewVector();
+                    facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
+                    break;
+
+                default:
+                    return null;
+            }
+
+            return facing;
+        }
+
         private TextCommandResult handleGrowSelection(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return ModifyMarker(BlockFacing.FromFirstLetter(dirchar), (int)args[0]);
+            var facing = blockFacingFromArg(""+dirchar, args);
+
+            return ModifyMarker(facing, (int)args[0]);
         }
 
         private TextCommandResult handleMark(TextCommandCallingArgs args)
@@ -514,12 +716,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult handleMarkStart(TextCommandCallingArgs args)
         {
             return SetStartPos(args.Caller.Pos);
-        }
-
-        private TextCommandResult handleBlu(TextCommandCallingArgs args)
-        {
-            BlockLineup(args.Caller.Pos.AsBlockPos, args.RawArgs);
-            return TextCommandResult.Success("Block lineup created");
         }
 
         private TextCommandResult handleToggleImpres(TextCommandCallingArgs args)
@@ -702,7 +898,9 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
         private TextCommandResult handleToolModeOff(TextCommandCallingArgs args)
-        {   
+        {
+            previewBlocks.ClearChunks();
+            previewBlocks.UnloadUnusedServerChunks();
             workspace.ToolsEnabled = false;
             workspace.SetTool(null, sapi);
             workspace.ResendBlockHighlights(this);
@@ -764,7 +962,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             return TextCommandResult.Success("Block placed");
         }
 
-        private TextCommandResult handleCpInfo(TextCommandCallingArgs args)
+        private TextCommandResult handleCbInfo(TextCommandCallingArgs args)
         {
             if (workspace.clipboardBlockData == null)
             {
@@ -794,6 +992,25 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             PasteBlockData(workspace.clipboardBlockData, workspace.StartMarker, EnumOrigin.StartPos);
             return TextCommandResult.Success(workspace.clipboardBlockData.BlockIds.Count + " blocks pasted");
+        }
+
+        private TextCommandResult handleLaunch(TextCommandCallingArgs args)
+        {
+            if (workspace.StartMarker == null || workspace.EndMarker == null)
+            {
+                return TextCommandResult.Error("Please mark start and end position");
+            }
+
+            workspace.clipboardBlockData = CopyArea(workspace.StartMarker, workspace.EndMarker, true);
+            FillArea(null, workspace.StartMarker, workspace.EndMarker, true);
+            BlockPos startPos = workspace.StartMarker.Copy();
+            startPos.Add(workspace.clipboardBlockData.PackedOffset);
+            IMiniDimension miniDimension = CreateDimensionFromSchematic(workspace.clipboardBlockData, startPos, EnumOrigin.StartPos);
+            Entity launched = GameContent.EntityTestShip.CreateShip(sapi, miniDimension);
+            launched.Pos.SetFrom(launched.ServerPos);
+            workspace.world.SpawnEntity(launched);
+
+            return TextCommandResult.Success(workspace.clipboardBlockData.BlockIds.Count + " blocks launched");
         }
 
         private TextCommandResult handlemPosCopy(TextCommandCallingArgs args)

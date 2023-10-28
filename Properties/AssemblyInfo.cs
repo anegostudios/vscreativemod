@@ -1,7 +1,5 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Vintagestory.API;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 
@@ -39,13 +37,13 @@ using Vintagestory.API.Config;
 [assembly: AssemblyVersion(GameVersion.AssemblyVersion)]
 [assembly: AssemblyFileVersion(GameVersion.OverallVersion)]
 
-[assembly: ModInfo( "Creative Mode", "creative",
+[assembly: ModInfo("Creative Mode", "creative",
     Version = GameVersion.ShortGameVersion,
     NetworkVersion = GameVersion.NetworkVersion,
     Description = "World editing, worldedit GUI and super flat world generation",
-	IconPath = "game/textures/gui/modicon.png",
-	Authors = new[] { "Tyron" },
-	WorldConfig = @"
+    IconPath = "game/textures/gui/modicon.png",
+    Authors = new[] { "Tyron" },
+    WorldConfig = @"
     {
 	    playstyles: [
 		    {
@@ -62,7 +60,8 @@ using Vintagestory.API.Config;
 					cloudypos: ""0.5"",
 					temporalStability: ""false"",
                     temporalStorms: ""off"",
-					snowAccum: ""false""
+					snowAccum: ""false"",
+					colorAccurateWorldmap: ""true""
 			    }
 		    }
 	    ],

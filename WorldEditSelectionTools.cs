@@ -8,47 +8,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 {
     public partial class WorldEdit
     {
-        TextCommandResult ModifyMarker(EnumAxis axis, int amount)
-        {
-            if (workspace.StartMarker == null || workspace.EndMarker == null)
-            {
-                return TextCommandResult.Error("Start marker or end marker not set");
-            }
-
-            BlockPos[] minMarkers = new BlockPos[] {
-                (workspace.StartMarker.X < workspace.EndMarker.X) ? workspace.StartMarker : workspace.EndMarker,
-                (workspace.StartMarker.Y < workspace.EndMarker.Y) ? workspace.StartMarker : workspace.EndMarker,
-                (workspace.StartMarker.Z < workspace.EndMarker.Z) ? workspace.StartMarker : workspace.EndMarker
-            };
-            BlockPos[] maxMarkers = new BlockPos[] {
-                (workspace.StartMarker.X >= workspace.EndMarker.X) ? workspace.StartMarker : workspace.EndMarker,
-                (workspace.StartMarker.Y >= workspace.EndMarker.Y) ? workspace.StartMarker : workspace.EndMarker,
-                (workspace.StartMarker.Z >= workspace.EndMarker.Z) ? workspace.StartMarker : workspace.EndMarker
-            };
-
-            if (axis == EnumAxis.X)
-            {
-                maxMarkers[0].X += amount;
-            }
-            if (axis == EnumAxis.Y)
-            {
-                maxMarkers[0].Y += amount;
-            }
-            if (axis == EnumAxis.Z)
-            {
-                maxMarkers[2].Z += amount;
-            }
-
-            EnsureInsideMap(workspace.StartMarker);
-            EnsureInsideMap(workspace.EndMarker);
-
-            workspace.HighlightSelectedArea();
-
-            // Stores the markers as a history state
-            workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
-
-            return TextCommandResult.Success(string.Format("Area grown by {0} blocks towards {1}", amount, axis));
-        }
+       
 
         TextCommandResult ModifyMarker(BlockFacing facing, int amount)
         {
@@ -133,6 +93,36 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.HighlightSelectedArea();
 
             return TextCommandResult.Success(string.Format("Selection rotated by {0} degrees.", angle));
+        }
+
+        private TextCommandResult HandleFlipCommand(EnumAxis axis)
+        {
+            if (workspace.StartMarker == null || workspace.EndMarker == null)
+            {
+                return TextCommandResult.Error("Start marker or end marker not set");
+            }
+
+            EnumOrigin origin = EnumOrigin.BottomCenter;
+            BlockPos mid = (workspace.StartMarker + workspace.EndMarker) / 2;
+            mid.Y = workspace.StartMarker.Y;
+
+            BlockSchematic schematic = CopyArea(workspace.StartMarker, workspace.EndMarker);
+
+            workspace.revertableBlockAccess.BeginMultiEdit();
+
+            schematic.TransformWhilePacked(sapi.World, origin, 0, axis);
+            FillArea(null, workspace.StartMarker, workspace.EndMarker);
+
+            PasteBlockData(schematic, mid, origin);
+
+            workspace.StartMarker = schematic.GetStartPos(mid, origin);
+            workspace.EndMarker = workspace.StartMarker.AddCopy(schematic.SizeX, schematic.SizeY, schematic.SizeZ);
+
+            workspace.revertableBlockAccess.EndMultiEdit();
+
+            workspace.HighlightSelectedArea();
+
+            return TextCommandResult.Success(string.Format("Selection flipped in {0} axis.", axis));
         }
 
 
@@ -416,21 +406,16 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockPos endPos = new BlockPos(Math.Max(start.X, end.X), Math.Max(start.Y, end.Y), Math.Max(start.Z, end.Z));
             BlockPos curPos = startPos.Copy();
 
-            int wx = endPos.X - startPos.X;
-            int wy = endPos.Y - startPos.Y;
-            int wz = endPos.Z - startPos.Z;
-
             int quantityBlocks = offset.X * offset.Y * offset.Z;
             Block block = sapi.World.Blocks[0];
             if (!MayPlace(block, quantityBlocks)) return 0;
-
 
             Dictionary<BlockPos, int> blocksByNewPos = new Dictionary<BlockPos, int>();
             Dictionary<BlockPos, TreeAttribute> blockEntityDataByNewPos = new Dictionary<BlockPos, TreeAttribute>();
 
             workspace.revertableBlockAccess.BeginMultiEdit();
 
-            // 1. Read area into dictionaries and clear it fully
+            // 1. Read area into dictionaries and delete area fully
             while (curPos.X < endPos.X)
             {
                 curPos.Y = startPos.Y;
@@ -487,7 +472,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                         update.NewBlockEntityData = betree.ToBytes();
                     }
                 }
-                
             }
 
             // 4. Restore block entity data
@@ -514,7 +498,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private int FillArea(ItemStack blockStack, BlockPos start, BlockPos end)
+        private int FillArea(ItemStack blockStack, BlockPos start, BlockPos end, bool notLiquids = false)
         {
             int updated = 0;
 
@@ -547,7 +531,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     curPos.Z = startPos.Z;
                     while (curPos.Z < finalPos.Z)
                     {
-                        workspace.revertableBlockAccess.SetBlock(0, curPos, BlockLayersAccess.Fluid);
+                        if (!notLiquids) workspace.revertableBlockAccess.SetBlock(0, curPos, BlockLayersAccess.Fluid);
                         workspace.revertableBlockAccess.SetBlock(blockId, curPos, blockStack);
                         curPos.Z++;
                         updated++;

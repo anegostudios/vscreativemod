@@ -113,6 +113,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues[Prefix + "DepthLimit"] = (int)value; }
         }
 
+        public float PlacementPercentage
+        {
+            get { return workspace.FloatValues[Prefix + "placementPercentage"]; }
+            set { workspace.FloatValues[Prefix + "placementPercentage"] = value; }
+        }
 
         public override Vec3i Size
         {
@@ -131,6 +136,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.FloatValues.ContainsKey(Prefix + "cutoutDim2")) CutoutDim2 = 0;
             if (!workspace.FloatValues.ContainsKey(Prefix + "cutoutDim3")) CutoutDim3 = 0;
 
+            if (!workspace.FloatValues.ContainsKey(Prefix + "placementPercentage")) PlacementPercentage = 100;
+
             if (!workspace.IntValues.ContainsKey(Prefix + "previewMode")) PreviewMode = true;
             if (!workspace.IntValues.ContainsKey(Prefix + "Mode")) BrushMode = EnumBrushMode.Fill;
             if (!workspace.IntValues.ContainsKey(Prefix + "Shape")) BrushShape = EnumBrushShape.Ball;
@@ -144,6 +151,22 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             switch (args[0])
             {
+                case "pp":
+                    PlacementPercentage = 0;
+                    float percentage = 0;
+
+                    if (args.Length > 1 && float.TryParse(args[1], out percentage))
+                    {
+                        PlacementPercentage = percentage;
+                    }
+
+                    worldEdit.Good(workspace.ToolName + " placement percentage " + (int)(percentage) + "% set.");
+
+                    GenBrush();
+                    workspace.ResendBlockHighlights(worldEdit);
+
+                    return true;
+
                 case "tm":
                     EnumBrushMode brushMode = EnumBrushMode.Fill;
 
@@ -413,8 +436,13 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             EnumDepthLimit depthLimit = DepthLimit;
 
+            float pp = PlacementPercentage / 100f;
+            var rnd = worldEdit.sapi.World.Rand;
+
             for (int i = 0; i < brushPositions.Length; i++)
-            { 
+            {
+                if (rnd.NextDouble() > pp) continue;
+
                 BlockPos dpos = targetPos.AddCopy(brushPositions[i].X, brushPositions[i].Y, brushPositions[i].Z);
 
                 bool skip = false;

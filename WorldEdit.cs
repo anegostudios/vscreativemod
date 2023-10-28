@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -26,6 +27,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         // Unpretty, but too lazy to type it over and over again ;-)
         IServerPlayer fromPlayer;
+        public IMiniDimension previewBlocks;
         WorldEditWorkspace workspace; 
         string exportFolderPath;
 
@@ -62,6 +64,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .RegisterMessageType(typeof(CopyToClipboardPacket))
                 .RegisterMessageType(typeof(SchematicJsonPacket))
                 .RegisterMessageType(typeof(WorldInteractPacket))
+                .RegisterMessageType(typeof(PreviewBlocksPacket))
             ;
         }
 
@@ -117,6 +120,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .EndSub()
                 .EndSub()
             ;
+
+            previewBlocks = sapi.World.BlockAccessor.CreateMiniDimension(new Vec3d());
+            int dimensionId = sapi.Server.SetMiniDimension(previewBlocks, 0);  //0 here matches BlockAccessorMovable.SelectionTrackingDimension
+            previewBlocks.SetSubDimensionId(dimensionId);
         }
 
         private TextCommandResult downloadClaim(TextCommandCallingArgs args)
@@ -301,16 +308,14 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void Event_PlayerNowPlaying(IServerPlayer player)
         {
-            fromPlayer = player as IServerPlayer;
+            fromPlayer = player;
 
             WorldEditWorkspace workspace = GetOrCreateWorkSpace(player);
-
-            IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
 
             // Initialize all tools once to build up the workspace for the client gui tool options
             foreach (var val in ToolRegistry.ToolTypes)
             {
-                ToolRegistry.InstanceFromType(val.Key, workspace, revertableBlockAccess);
+                ToolRegistry.InstanceFromType(val.Key, workspace, workspace.revertableBlockAccess);
             }
 
             if (workspace.ToolsEnabled)
@@ -323,6 +328,38 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 workspace.HighlightSelectedArea();
             }
+        }
+
+        private void RevertableBlockAccess_BeforeCommit(IBulkBlockAccessor ba, WorldEditWorkspace workspace)
+        {
+            if (workspace.WorldEditConstraint == EnumWorldEditConstraint.Selection && workspace.StartMarker != null && workspace.EndMarker != null)
+            {
+                constrainEditsToSelection(ba, workspace);
+            }
+        }
+
+        private void constrainEditsToSelection(IBulkBlockAccessor ba, WorldEditWorkspace workspace)
+        {
+            var selection = new Cuboidi(workspace.StartMarker, workspace.EndMarker);
+
+            var stagedBlockPositions = ba.StagedBlocks.Keys.ToList();
+            foreach (var pos in stagedBlockPositions)
+            {
+                if (!selection.Contains(pos))
+                {
+                    ba.StagedBlocks.Remove(pos);
+                }
+            }
+
+            var stagedDecorPositions = ba.StagedDecors.Keys.ToList();
+            foreach (var pos in stagedDecorPositions)
+            {
+                if (!selection.Contains(new Vec3i(pos.X, pos.Y, pos.Z)))
+                {
+                    ba.StagedDecors.Remove(pos);
+                }
+            }
+
         }
 
         private void OnSave()
@@ -357,6 +394,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
                         WorldEditWorkspace workspace = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
+                        revertableBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, workspace);
+
                         workspace.FromBytes(reader);
                         if (workspace.PlayerUID == null)
                         {
@@ -404,6 +443,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
                 workspaces[playeruid] = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
+                revertableBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, workspace);
+
                 workspaces[playeruid].PlayerUID = playeruid;
                 return workspaces[playeruid];
             }
@@ -582,37 +623,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private void BlockLineup(BlockPos pos, CmdArgs args)
-        {
-            IList<Block> blocks = sapi.World.Blocks;
-
-            bool all = args.PopWord() == "all";
-
-            List<Block> existingBlocks = new List<Block>();
-            for (int i = 0; i < blocks.Count; i++)
-            {
-                Block block = blocks[i];
-
-                if (block == null || block.Code == null) continue;
-
-                if (all) existingBlocks.Add(block);
-                else if (block.CreativeInventoryTabs != null && block.CreativeInventoryTabs.Length > 0)
-                {
-                    existingBlocks.Add(block);
-                }
-            }
-
-            int width = (int)Math.Sqrt(existingBlocks.Count);
-
-            FillArea(null, pos.AddCopy(0, 0, 0), pos.AddCopy(width + 1, 10, width + 1));
-
-            for (int i = 0; i < existingBlocks.Count; i++)
-            {
-                workspace.revertableBlockAccess.SetBlock(existingBlocks[i].BlockId, pos.AddCopy(i / width, 0, i % width));
-            }
-
-            workspace.revertableBlockAccess.Commit();
-        }
 
         public void OnInteractStart(IServerPlayer byPlayer, BlockSelection blockSel)
         {
@@ -663,15 +673,50 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.ToolInstance.OnBreak(this, blockSel, ref handling);
         }
 
-        private BlockSchematic CopyArea(BlockPos start, BlockPos end)
+        private BlockSchematic CopyArea(BlockPos start, BlockPos end, bool notLiquids = false)
         {
             BlockPos startPos = new BlockPos(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Min(start.Z, end.Z));
             BlockSchematic blockdata = new BlockSchematic();
+            blockdata.OmitLiquids = notLiquids;
             blockdata.AddArea(sapi.World, start, end);
             blockdata.Pack(sapi.World, startPos);
             return blockdata;
         }
 
+        /// <summary>
+        /// Creates a mini-dimension (a BlockAccessorMovable) and places the schematic in it, this can then be moved and rendered
+        /// </summary>
+        public IMiniDimension CreateDimensionFromSchematic(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin, IMiniDimension miniDimension = null)
+        {
+            BlockPos originPos = blockData.GetStartPos(startPos, origin);
+
+            EnumAxis? axis = null;
+            if (workspace.ImportFlipped) axis = EnumAxis.Y;
+
+            BlockSchematic rotated = blockData.ClonePacked();
+            rotated.TransformWhilePacked(sapi.World, origin, workspace.ImportAngle, axis);
+
+            rotated.Init(workspace.revertableBlockAccess);
+
+            int dimensionId;
+            if (miniDimension == null)
+            {
+                miniDimension = workspace.revertableBlockAccess.CreateMiniDimension(new Vec3d(originPos.X, originPos.Y, originPos.Z));
+                dimensionId = sapi.Server.LoadMiniDimension(miniDimension);
+                miniDimension.SetSubDimensionId(dimensionId);
+            }
+            else
+            {
+                miniDimension.CurrentPos.SetPos(originPos);
+            }
+
+            originPos.Sub(startPos);
+            originPos.SetDimension(1);
+            miniDimension.AdjustPosForSubDimension(originPos);
+            rotated.Place(miniDimension, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
+            rotated.PlaceDecors(miniDimension, originPos);
+            return miniDimension;
+        }
 
         private void PasteBlockData(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin)
         {
@@ -778,5 +823,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             fromPlayer.SendMessage(0, string.Format(message, args), EnumChatType.CommandError);
         }
 
+        public void SendPreviewOriginToClient(BlockPos origin, int dim)
+        {
+            serverChannel.SendPacket(new PreviewBlocksPacket()
+            {
+                pos = origin,
+                dimId = dim
+            }, fromPlayer);
+        }
     }
 }

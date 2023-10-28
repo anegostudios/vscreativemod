@@ -59,7 +59,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public AirBrushTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
             if (!workspace.FloatValues.ContainsKey("std.airBrushRadius")) Radius = 8;
-            if (!workspace.FloatValues.ContainsKey("std.airBrushQuantity")) Quantity = 10;
+            if (!workspace.FloatValues.ContainsKey("std.airBrushQuantity")) Quantity = 20f;
             if (!workspace.IntValues.ContainsKey("std.airBrushApply")) Apply = EnumAirBrushApply.AnyFace;
             if (!workspace.IntValues.ContainsKey("std.airBrushPlaceMode")) PlaceMode = EnumAirBrushMode.Add;
             if (!workspace.IntValues.ContainsKey("std.airBrushMode")) BrushMode = EnumBrushMode.ReplaceSelected;
@@ -200,14 +200,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (Quantity == 0 || Radius == 0) return;
 
             float radSq = Radius * Radius;
-            float q = Quantity;
+            
 
             Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
             Block block = ba.GetBlock(blockSel.Position);
             if (isbreak) block = ba.GetBlock(0);
 
-            int quantityBlocks = (int)(GameMath.PI * radSq);
-            if (!worldEdit.MayPlace(block, (int)q)) return;
+            if (!worldEdit.MayPlace(block, (int)radSq * 2)) return;
 
             if (oldBlockId >= 0) worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             lcgRand.SetWorldSeed(rand.Next());
@@ -260,6 +259,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
             List<BlockPos> viablePositionsList = new List<BlockPos>(viablePositions);
+            float q = GameMath.Clamp(Quantity/100f, 0, 1) * viablePositions.Count;
 
             while (q-- > 0)
             {
