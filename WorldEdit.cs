@@ -321,7 +321,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (workspace.ToolsEnabled)
             {
                 workspace.ToolInstance.Load(sapi);
+                WorldEditWorkspace prev = this.workspace;
+                this.workspace = workspace;
                 workspace.ResendBlockHighlights(this);
+                this.workspace = prev;
                 SendPlayerWorkSpace(player.PlayerUID);
             }
             else
@@ -698,12 +701,13 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             rotated.Init(workspace.revertableBlockAccess);
 
-            int dimensionId;
+            int subDimensionId;
             if (miniDimension == null)
             {
                 miniDimension = workspace.revertableBlockAccess.CreateMiniDimension(new Vec3d(originPos.X, originPos.Y, originPos.Z));
-                dimensionId = sapi.Server.LoadMiniDimension(miniDimension);
-                miniDimension.SetSubDimensionId(dimensionId);
+                subDimensionId = sapi.Server.LoadMiniDimension(miniDimension);
+                if (subDimensionId < 0) return null;
+                miniDimension.SetSubDimensionId(subDimensionId);
             }
             else
             {

@@ -302,7 +302,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .BeginSub("replace-material")
                     .WithAlias("replacemat").WithAlias("repmat")
                     .RequiresPlayer()
-                    .WithDesc("Replace a block material with another one, only if supported by the block (currently supported by support beams only). Uses the block in the players active slot as reference block type and target block material")
+                    .WithDesc("Replace a block material with another one, only if supported by the block. Hotbarslot 0: Search material, Active hand slot: Replace material")
                     .HandleWith(onReplaceMaterial)
                 .EndSub()
                 .Validate()
@@ -353,12 +353,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                 var ime = sapi.World.BlockAccessor.GetBlock(pos).GetInterface<IMaterialExchangeable>(sapi.World, pos);
                 if (ime != null)
                 {
-                    ime.ExchangeWith(fromslot, toslot);
-                    corrected++;
+                    if (ime.ExchangeWith(fromslot, toslot))
+                    {
+                        corrected++;
+                    }
                 }
             });
 
-            return TextCommandResult.Success(corrected + " block materials exchange");
+            return TextCommandResult.Success(corrected + " block materials exchanged");
         }
 
         private TextCommandResult handleClearWater(TextCommandCallingArgs args)
@@ -1006,6 +1008,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockPos startPos = workspace.StartMarker.Copy();
             startPos.Add(workspace.clipboardBlockData.PackedOffset);
             IMiniDimension miniDimension = CreateDimensionFromSchematic(workspace.clipboardBlockData, startPos, EnumOrigin.StartPos);
+            if (miniDimension == null) return TextCommandResult.Error("No more Mini Dimensions available");
             Entity launched = GameContent.EntityTestShip.CreateShip(sapi, miniDimension);
             launched.Pos.SetFrom(launched.ServerPos);
             workspace.world.SpawnEntity(launched);

@@ -142,7 +142,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        Queue<SchematicJsonPacket> receievedSchematics = new Queue<SchematicJsonPacket>();
+        Queue<SchematicJsonPacket> receivedSchematics = new Queue<SchematicJsonPacket>();
         GuiDialogConfirmAcceptFile acceptDlg;
         private void OnReceivedSchematic(SchematicJsonPacket message)
         {
@@ -154,20 +154,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return;
             }
 
-            receievedSchematics.Enqueue(message);
+            receivedSchematics.Enqueue(message);
 
             if (allowCount == 0)
             {
                 if ((acceptDlg == null || !acceptDlg.IsOpened()))
                 {
-                    capi.ShowChatMessage("Server tried to send a schematic file, please confirm."); //To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!
+                    capi.ShowChatMessage(Lang.Get("schematic-confirm")); //To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!
                     acceptDlg = new GuiDialogConfirmAcceptFile(capi, Lang.Get("The server wants to send you a schematic file. Please confirm to accept the file.") + "\n\n" + Lang.Get("{0}.json ({1} Kb)", message.Filename, message.JsonCode.Length / 1024), (code) => onConfirm(code));
                     acceptDlg.TryOpen();
                 }
                 return;
             }
 
-            capi.ShowChatMessage("Server tried to send a schematic file, but it was ignored as a precaution. To enable acceptance, set <a href=\"chattype://.clientconfig allowSaveFilesFromServer 1\">allowSaveFilesFromServer to 1</a>");
+            capi.ShowChatMessage(Lang.Get("schematic-ignored") + " <a href=\"chattype://.clientconfig allowSaveFilesFromServer 1\">allowSaveFilesFromServer 1</a>");
         }
 
 
@@ -188,8 +188,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         capi.Settings.Int["allowSaveFilesFromServer"] = 1;
                     }
 
-                    var sdf = new Queue<SchematicJsonPacket>(receievedSchematics);
-                    receievedSchematics.Clear();
+                    var sdf = new Queue<SchematicJsonPacket>(receivedSchematics);
+                    receivedSchematics.Clear();
                     while (sdf.Count > 0)
                     {
                         if (capi.Settings.Int["allowSaveFilesFromServer"] > 0)
@@ -231,12 +231,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
                 capi.Settings.Int["allowSaveFilesFromServer"]--;
-                capi.ShowChatMessage(
-                    $"Schematic file <a href=\"datafolder://worldedit\">{message.Filename}.json</a> received and saved. Accepting {capi.Settings.Int["allowSaveFilesFromServer"]} more.");
+                capi.ShowChatMessage(Lang.Get("schematic-received", "<a href=\"datafolder://worldedit\">" + message.Filename + ".json</a>", capi.Settings.Int["allowSaveFilesFromServer"]));
             }
             catch (IOException e)
             {
-                capi.ShowChatMessage("Server sent a schematic file, but failed to save it: " + e.Message);
+                capi.ShowChatMessage(Lang.Get("schematic-failed") + " " + e.Message);
             }
         }
 
@@ -512,6 +511,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     clientChannel.SendPacket(new ChangePlayerModePacket() { fly = fly, noclip = noclip });
                     break;
+                case "fphands":
+                    capi.Settings.Bool["hideFpHands"] = newValue != "true" && newValue != "1";   
+                    break;
                 case "overrideambient":
                     bool on = (newValue == "1" || newValue == "true");
                     SendGlobalAmbient(on);
@@ -602,6 +604,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     if (fly && !noclip) return "1";
                     if (fly && noclip) return "2";
                     return "0";
+                case "fphands":
+                    return capi.Settings.Bool["hideFpHands"] ? "0" : "1";
                 case "overrideambient":
                     return amb.FogColor.Weight >= 0.99f ? "1" : "0";
                 case "tooloffsetmode":
