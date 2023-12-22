@@ -31,28 +31,26 @@ namespace Vintagestory.GameContent
             handling = EnumHandHandling.PreventDefaultAction;
         }
 
-        public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
+        public override void OnHeldUseStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, EnumHandInteract useType, bool firstEvent, ref EnumHandHandling handling)
         {
-            if (byEntity.World.Side == EnumAppSide.Server)
+            if (!firstEvent) return;
+            
+            if (useType == EnumHandInteract.HeldItemAttack)
             {
-                IServerPlayer plr = (byEntity as EntityPlayer).Player as IServerPlayer;
-                if (plr != null)
-                {
-                    sapi.ModLoader.GetModSystem<WorldEdit>().OnInteractStart(plr, blockSel);
-                }
+                OnHeldAttackStart(slot, byEntity, blockSel, entitySel, ref handling);
             }
+            if (useType == EnumHandInteract.HeldItemInteract)
+            {
+                if (byEntity.World.Side == EnumAppSide.Server)
+                {
+                    if ((byEntity as EntityPlayer)?.Player is IServerPlayer plr)
+                    {
+                        sapi.ModLoader.GetModSystem<WorldEdit>().OnInteractStart(plr, blockSel);
+                    }
+                }
 
-            handling = EnumHandHandling.PreventDefaultAction;
-        }
-
-        public override bool OnHeldAttackStep(float secondsPassed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSelection, EntitySelection entitySel)
-        {
-            return base.OnHeldAttackStep(secondsPassed, slot, byEntity, blockSelection, entitySel);
-        }
-
-        public override void OnHeldAttackStop(float secondsPassed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSelection, EntitySelection entitySel)
-        {
-            base.OnHeldAttackStop(secondsPassed, slot, byEntity, blockSelection, entitySel);
+                handling = EnumHandHandling.PreventDefaultAction;
+            }
         }
     }
 }

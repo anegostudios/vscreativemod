@@ -47,6 +47,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.ignorePlants"] = value ? 1 : 0; }
         }
 
+        public bool IgnoreLooseSurfaceItems
+        {
+            get { return workspace.IntValues["std.ignoreLooseSurfaceItems"] > 0; }
+            set { workspace.IntValues["std.ignoreLooseSurfaceItems"] = value ? 1 : 0; }
+        }
+
 
         public FloodFillTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
@@ -55,6 +61,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey("std.checkEnclosure")) CheckEnclosure = true;
             if (!workspace.IntValues.ContainsKey("std.ignoreWater")) IgnoreWater = true;
             if (!workspace.IntValues.ContainsKey("std.ignorePlants")) IgnorePlants = true;
+            if (!workspace.IntValues.ContainsKey("std.ignoreLooseSurfaceItems")) IgnoreLooseSurfaceItems = true;
             if (!workspace.IntValues.ContainsKey("std.mode")) Mode = 2;
         }
 
@@ -103,11 +110,17 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                 case "ip":
-                    {
-                        IgnorePlants = (bool)args.PopBool(true);
-                        worldEdit.Good(workspace.ToolName + " IgnorePlants set to " + IgnorePlants);
-                        return true;
-                    }
+                {
+                    IgnorePlants = (bool)args.PopBool(true);
+                    worldEdit.Good(workspace.ToolName + " IgnorePlants set to " + IgnorePlants);
+                    return true;
+                }
+                case "ii":
+                {
+                    IgnoreLooseSurfaceItems = (bool)args.PopBool(true);
+                    worldEdit.Good(workspace.ToolName + " IgnoreLooseSurfaceItems set to " + IgnoreLooseSurfaceItems);
+                    return true;
+                }
             }
 
             return false;
@@ -184,6 +197,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             var ignWater = IgnoreWater;
             var ignPlants = IgnorePlants;
+            var ignSurfaceItems = IgnoreLooseSurfaceItems;
 
 
             while (bfsQueue.Count > 0)
@@ -200,9 +214,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (inBounds)
                     {
+                        var isBoulder = block.Code.Path.StartsWith("loose");
                         bool fillable =
                             (ignWater || ba.GetBlock(curPos, BlockLayersAccess.Fluid).Id == 0) &&
-                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant)) && !fillablePositions.Contains(curPos)
+                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder)) && !fillablePositions.Contains(curPos)
                         ;
 
                         if (fillable) 

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -30,23 +29,8 @@ namespace Vintagestory.ServerMods.WorldEdit
         public IMiniDimension previewBlocks;
         WorldEditWorkspace workspace; 
         string exportFolderPath;
-
-
-        public bool ReplaceMetaBlocks
-        {
-            get
-            {
-                object val;
-                sapi.ObjectCache.TryGetValue("donotResolveImports", out val);
-
-                if (val is bool)
-                {
-                    return !(bool)val;
-                }
-
-                return true;
-            }
-        }
+        
+        public static bool ReplaceMetaBlocks { get; set; }
 
 
         public override void StartPre(ICoreAPI api)
@@ -81,7 +65,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             sapi.Permissions.RegisterPrivilege("worldedit", "Ability to use world edit tools");
 
-            registerCommands();
+            RegisterCommands();
 
             sapi.Event.PlayerNowPlaying += Event_PlayerNowPlaying;
 
@@ -354,15 +338,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
-            var stagedDecorPositions = ba.StagedDecors.Keys.ToList();
+            var stagedDecorPositions = ba.StagedBlocks.Where(b => b.Value.Decor != null).ToArray();
             foreach (var pos in stagedDecorPositions)
             {
-                if (!selection.Contains(new Vec3i(pos.X, pos.Y, pos.Z)))
+                if (!selection.Contains(new Vec3i(pos.Key.X, pos.Key.Y, pos.Key.Z)))
                 {
-                    ba.StagedDecors.Remove(pos);
+                    ba.StagedBlocks[pos.Key].Decor = null;
                 }
             }
-
         }
 
         private void OnSave()
@@ -529,7 +512,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             
             workspace.HighlightSelectedArea();
-            workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
+            workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
             SendPlayerWorkSpace(workspace.PlayerUID);
         }
 
@@ -605,22 +588,22 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult HandleHistoryChange(TextCommandCallingArgs args, bool redo)
         {
-            if (redo && workspace.revertableBlockAccess.CurrentyHistoryState == 0)
+            if (redo && workspace.revertableBlockAccess.CurrentHistoryState == 0)
             {
                 return TextCommandResult.Error("Can't redo. Already on newest history state.");
             }
-            if (!redo && workspace.revertableBlockAccess.CurrentyHistoryState == workspace.revertableBlockAccess.AvailableHistoryStates)
+            if (!redo && workspace.revertableBlockAccess.CurrentHistoryState == workspace.revertableBlockAccess.AvailableHistoryStates)
             {
                 return TextCommandResult.Error("Can't undo. Already on oldest available history state.");
             }
 
-            int prevHstate = workspace.revertableBlockAccess.CurrentyHistoryState;
+            int prevHstate = workspace.revertableBlockAccess.CurrentHistoryState;
 
             int steps = (int)args[0];
 
             workspace.revertableBlockAccess.ChangeHistoryState(steps * (redo ? -1 : 1));
 
-            int quantityChanged = Math.Abs(prevHstate - workspace.revertableBlockAccess.CurrentyHistoryState);
+            int quantityChanged = Math.Abs(prevHstate - workspace.revertableBlockAccess.CurrentHistoryState);
 
             return TextCommandResult.Success(string.Format("Performed {0} {1} times.", redo ? "redo" : "undo", quantityChanged));
         }
@@ -734,10 +717,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             rotated.Init(workspace.revertableBlockAccess);
             rotated.Place(workspace.revertableBlockAccess, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
+            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos);
             workspace.revertableBlockAccess.Commit();
 
             blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
-            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos);
 
             workspace.revertableBlockAccess.CommitBlockEntityData();
         }
@@ -762,10 +745,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult ExportArea(string filename, BlockPos start, BlockPos end, IServerPlayer sendToPlayer = null)
         {
-            BlockSchematic blockdata = CopyArea(start, end);
-            int exported = blockdata.BlockIds.Count;
+            var blockdata = CopyArea(start, end);
+            var exported = blockdata.BlockIds.Count;
+            var exportedEntities = blockdata.Entities.Count;
 
-            string outfilepath = Path.Combine(exportFolderPath, filename);
+            var outfilepath = Path.Combine(exportFolderPath, filename);
 
             if (sendToPlayer != null)
             {
@@ -781,7 +765,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
                 else
                 {
-                    return TextCommandResult.Success(exported + " blocks exported.");
+                    return TextCommandResult.Success(exported + " blocks and "+ exportedEntities + " Entities exported");
                 }
             }
 

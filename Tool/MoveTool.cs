@@ -108,6 +108,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case EnumMoveToolMode.MoveSelection:
                     workspace.StartMarker.Add(vec);
                     workspace.EndMarker.Add(vec);
+                    workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
                     workspace.ResendBlockHighlights(worldedit);
                     break;
             }
@@ -124,8 +125,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             Vec3i offset = (blockSelection.Position - center).ToVec3i();
             offset.Add(blockSelection.Face);
-
+            var amount = Amount;
+            Amount = 1;
             Handle(worldEdit, offset);
+            Amount = amount;
         }
 
 

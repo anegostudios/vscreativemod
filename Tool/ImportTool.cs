@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using ProperVersion;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
@@ -56,6 +58,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey("std.pasteToolOrigin")) Origin = EnumOrigin.BottomCenter;
             if (!workspace.IntValues.ContainsKey("std.importReplaceMode")) ReplaceMode = EnumReplaceMode.Replaceable;
             if (!workspace.IntValues.ContainsKey("std.pasteToolRandomRotate")) RandomRotate = false;
+            if (workspace.clipboardBlockData != null) blockDatas = new[] { workspace.clipboardBlockData };
         }
 
         public void LoadBlockdatas(ICoreServerAPI api, WorldEdit worldEdit = null)
@@ -63,19 +66,19 @@ namespace Vintagestory.ServerMods.WorldEdit
             this.blockDatas = new BlockSchematic[0];
 
             if (BlockDataFilenames == null) return;
-            string[] filenames = BlockDataFilenames.Split(',');
+            var filenames = BlockDataFilenames.Split(',');
 
             List<BlockSchematic> blockDatas = new List<BlockSchematic>();
-            string exportFolderPath = api.GetOrCreateDataPath("WorldEdit");
+            var exportFolderPath = api.GetOrCreateDataPath("WorldEdit");
 
-            int failed = 0;
+            var failed = 0;
 
-            for (int i = 0; i < filenames.Length; i++)
+            for (var i = 0; i < filenames.Length; i++)
             {
-                string infilepath = Path.Combine(exportFolderPath, filenames[i]);
+                var infilepath = Path.Combine(exportFolderPath, filenames[i]);
 
-                string error = "";
-                BlockSchematic blockData = BlockSchematic.LoadFromFile(infilepath, ref error);
+                var error = "";
+                var blockData = BlockSchematic.LoadFromFile(infilepath, ref error);
                 if (blockData == null)
                 {
                     worldEdit?.Bad(error);
@@ -108,7 +111,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "imc":
                     if (workspace.clipboardBlockData != null)
                     {
-                        this.blockDatas = new BlockSchematic[] { workspace.clipboardBlockData };
+                        blockDatas = new[] { workspace.clipboardBlockData };
                         worldEdit.Good("Ok, using copied blockdata");
                         nextRnd = 0;
                         workspace.ResendBlockHighlights(worldEdit);
@@ -322,12 +325,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             BlockPos originPos = blockData.GetStartPos(blockSel.Position, Origin);
             blockData.Init(ba);
-            blockData.Place(ba, worldEdit.sapi.World, originPos, ReplaceMode, worldEdit.ReplaceMetaBlocks);
+            blockData.Place(ba, worldEdit.sapi.World, originPos, ReplaceMode, WorldEdit.ReplaceMetaBlocks);
 
             ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position));
             blockData.PlaceDecors(ba, originPos);
             ba.Commit();
-            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
+            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes, false, null, 0, null, WorldEdit.ReplaceMetaBlocks);
             ba.CommitBlockEntityData();
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);

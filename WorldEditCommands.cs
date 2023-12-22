@@ -12,7 +12,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 {
     public partial class WorldEdit : ModSystem
     {
-        protected void registerCommands()
+        private void RegisterCommands()
         {
             var parsers = sapi.ChatCommands.Parsers;
 
@@ -42,7 +42,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("copy")
                     .WithDesc("Copy marked position to server clipboard")
-                    .WithAlias("mcopy").WithAlias("c")
+                    .WithAlias("c")
                     .HandleWith(handleMcopy)
                 .EndSub()
                 .BeginSub("testlaunch")
@@ -51,12 +51,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("scp")
                     .WithDesc("Copy a /we mark command text to your local clipboard")
-                    .WithAlias("mposcopy").WithAlias("selection-clipboard")
+                    .WithAlias("selection-clipboard")
                     .HandleWith(handlemPosCopy)
                 .EndSub()
                 .BeginSub("paste")
                     .WithDesc("Paste server clipboard data")
-                    .WithAlias("mpaste").WithAlias("p").WithAlias("v")
+                    .WithAlias("p").WithAlias("v")
                     .HandleWith(handlemPaste)
                 .EndSub()
                 .BeginSub("cbi")
@@ -128,24 +128,24 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("export")
                     .WithDesc("Export marked area to server file system")
-                    .WithAlias("export").WithAlias("mexp")
+                    .WithAlias("exp")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("'c' to also copy mark command to client clipboard"))
                     .HandleWith(handleMex)
                 .EndSub()
                 .BeginSub("export-client")
                     .WithDesc("Export selected area to client file system")
-                    .WithAlias("mexc").WithAlias("expc")
+                    .WithAlias("expc")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("'c' to also copy mark command to client clipboard"))
                     .HandleWith(handleMexc)
                 .EndSub()
-                .BeginSub("mre")
+                .BeginSub("relight-selection")
                     .WithDesc("Relight selected area")
-                    .WithAlias("relight-selection").WithAlias("rls")
+                    .WithAlias("rls")
                     .HandleWith(handleRelightMarked)
                 .EndSub()
                 .BeginSub("generate-multiblock-code")
                     .WithDesc("Generate multiblock code of selected area")
-                    .WithAlias("mgencode").WithAlias("gmc")
+                    .WithAlias("gmc")
                     .HandleWith(handleMgenCode)
                 .EndSub()
                 .BeginSub("import")
@@ -155,7 +155,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .HandleWith(handleImport)
                 .EndSub()
                 .BeginSub("resolve-meta")
-                    .WithDesc("Toggle resolve meta blocks mode during import")
+                    .WithDesc("Toggle resolve meta blocks mode during Worldedit import. Turn it off to spawn structures as they are. For example, in this mode, instead of traders, their meta spawners will spawn")
                     .WithAlias("impres").WithAlias("rm")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleToggleImpres)
@@ -163,12 +163,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                 
                 .BeginSub("start")
                     .WithDesc("Mark start position for selection")
-                    .WithAlias("ms").WithAlias("s").WithAlias("1")
+                    .WithAlias("s").WithAlias("1")
                     .HandleWith(handleMarkStart)
                 .EndSub()
                 .BeginSub("end")
                     .WithDesc("Mark end position for selection")
-                    .WithAlias("me").WithAlias("e").WithAlias("2")
+                    .WithAlias("e").WithAlias("2")
                     .HandleWith(handleMarkEnd)
                 .EndSub()
                 .BeginSub("select")
@@ -190,7 +190,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("rotate")
                     .WithDesc("Rotate selected area")
-                    .WithAlias("mr").WithAlias("rot")
+                    .WithAlias("rot")
                     .WithArgs(parsers.WordRange("angle", "-270", "-180", "-90", "0", "90", "180", "270"))
                     .HandleWith(handleRotateSelection)
                 .EndSub()
@@ -205,12 +205,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }))
                     .HandleWith(handleFlipSelection)
                 .EndSub()
-
-                .BeginSubs("mmirn", "mmire", "mmirs", "mmirw", "mmiru", "mmird")
-                    .WithDesc("Mirror selected area in given direction")
-                    .WithArgs(parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
-                    .HandleWith(handleMirrorShorthand)
-                .EndSub()
+                
                 .BeginSub("repeat")
                     .WithAlias("rep")
                     .WithDesc("Repeat selected area in given direction")
@@ -221,21 +216,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                     )
                     .HandleWith(handleRepeatSelection)
                 .EndSub()
-                .BeginSubs("mprepn", "mprepe", "mprepe", "mpreps", "mprepu", "mprepd")
-                    .WithDesc("Repeat selected area in given direction")
-                    .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
-                    .HandleWith(handleRepeatShorthand)
-                .EndSub()
                 .BeginSub("move")
                     .WithAlias("m")
                     .WithDesc("Move selected area in given direction")
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
                     .HandleWith(handleMoveSelection)
-                .EndSub()
-                .BeginSubs("mmn", "mme", "mms", "mms", "mmw", "mmu", "mmd")
-                    .WithDesc("Move selected area in given direction")
-                    .WithArgs(parsers.OptionalInt("amount", 1))
-                    .HandleWith(handleMoveSelectionShorthand)
                 .EndSub()
                 .BeginSub("mmby")
                     .WithDesc("Move selected area by given amount")
@@ -247,50 +232,45 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
                     .HandleWith(handleShiftSelection)
                 .EndSub()
-                .BeginSubs("smn", "sme", "sms", "sms", "smw", "smu", "smd")
-                    .WithDesc("Shift current selection in given direction")
-                    .WithArgs(parsers.OptionalInt("amount", 1))
-                    .HandleWith(handleShiftSelectionShorthand)
-                .EndSub()
                 .BeginSub("smby")
                     .WithDesc("Shift current selection by given amount")
                     .WithArgs(parsers.IntDirection("direction"))
                     .HandleWith(handleShiftSelectionBy)
                 .EndSub()
                 .BeginSub("clear")
-                    .WithAlias("mc").WithAlias("cs")
+                    .WithAlias("cs")
                     .WithDesc("Clear current selection. Does not remove blocks, only the selection.")
                     .HandleWith(handleClearSelection)
                 .EndSub()
                 .BeginSub("info")
-                    .WithAlias("minfo").WithAlias("info-selection").WithAlias("is")
+                    .WithAlias("info-selection").WithAlias("is")
                     .WithDesc("Info about your current selection")
                     .HandleWith(handleSelectionInfo)
                 .EndSub()
                 .BeginSub("fill")
-                    .WithAlias("mfill").WithAlias("f")
-                    .WithDesc("Fill current selection with the block you are holding")
+                    .WithAlias("f")
+                    .WithDesc("Fill current selection with the block you are holding and remove all entities inside the area")
                     .HandleWith(handleFillSelection)
                 .EndSub()
                 .BeginSub("delete")
-                    .WithAlias("mdelete").WithAlias("del")
+                    .WithAlias("del")
                     .WithDesc("Delete all blocks and entities inside your current selection")
                     .HandleWith(handleDeleteSelection)
                 .EndSub()
                 .BeginSub("pacify-water")
-                    .WithAlias("mpacifywater").WithAlias("pw")
+                    .WithAlias("pw")
                     .WithDesc("Pacify water in selected area. Turns all flowing water block into still water.")
                     .WithArgs(parsers.OptionalWord("liquid code (default: water)"))
                     .HandleWith(handlePacifyWater)
                 .EndSub()
                 .BeginSub("deletewater")
-                    .WithAlias("delete-water").WithAlias("mdeletewater").WithAlias("delw")
+                    .WithAlias("delete-water").WithAlias("delw")
                     .WithDesc("Deletes all water in selected area")
                     .WithArgs(parsers.OptionalWord("liquidcode"))
                     .HandleWith(handleClearWater)
                 .EndSub()
                 .BeginSub("delete-nearby")
-                    .WithDesc("Delete area around caller")
+                    .WithDesc("Delete area (blocks and entities) around caller")
                     .WithArgs(parsers.Int("horizontal size"), parsers.Int("height"))
                     .HandleWith(handleDeleteArea)
                 .EndSub()
@@ -307,6 +287,50 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .Validate()
             ;
+
+            if (sapi.World.Config.GetBool("legacywecommands"))
+            {
+                sapi.ChatCommands
+                    .GetOrCreate("we")
+                    .BeginSub("copy").WithAlias("mcopy").EndSub()
+                    .BeginSub("scp").WithAlias("mposcopy").EndSub()
+                    .BeginSub("paste").WithAlias("mpaste").EndSub()
+                    .BeginSub("export").WithAlias("mex").EndSub()
+                    .BeginSub("export-client").WithAlias("mexc").EndSub()
+                    .BeginSub("relight-selection").WithAlias("mre").EndSub()
+                    .BeginSub("generate-multiblock-code").WithAlias("mgencode").EndSub()
+                    .BeginSub("start").WithAlias("ms").EndSub()
+                    .BeginSub("end").WithAlias("me").EndSub()
+                    .BeginSub("fill").WithAlias("mfill").EndSub()
+                    .BeginSub("delete").WithAlias("mdelete").EndSub()
+                    .BeginSub("pacify-water").WithAlias("mpacifywater").EndSub()
+                    .BeginSub("clear").WithAlias("mc").EndSub()
+                    .BeginSub("deletewater").WithAlias("mdeletewater").EndSub()
+                    .BeginSub("info").WithAlias("minfo").EndSub()
+                    .BeginSub("rotate").WithAlias("mr").EndSub()
+                    .BeginSubs("mmirn", "mmire", "mmirs", "mmirw", "mmiru", "mmird")
+                        .WithDesc("Mirror selected area in given direction")
+                        .WithArgs(parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
+                        .HandleWith(handleMirrorShorthand)
+                    .EndSub()
+                    .BeginSubs("mprepn", "mprepe", "mprepe", "mpreps", "mprepu", "mprepd")
+                        .WithDesc("Repeat selected area in given direction")
+                        .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn"))
+                        .HandleWith(handleRepeatShorthand)
+                    .EndSub()
+                    .BeginSubs("mmn", "mme", "mms", "mms", "mmw", "mmu", "mmd")
+                        .WithDesc("Move selected area in given direction")
+                        .WithArgs(parsers.OptionalInt("amount", 1))
+                        .HandleWith(handleMoveSelectionShorthand)
+                    .EndSub()
+                    
+                    .BeginSubs("smn", "sme", "sms", "sms", "smw", "smu", "smd")
+                        .WithDesc("Shift current selection in given direction")
+                        .WithArgs(parsers.OptionalInt("amount", 1))
+                        .HandleWith(handleShiftSelectionShorthand)
+                    .EndSub()
+                    ;
+            }
         }
 
         private TextCommandResult handleConstrain(TextCommandCallingArgs args)
@@ -474,7 +498,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-
         private TextCommandResult onToolCommand(TextCommandCallingArgs args)
         {
             if (args.RawArgs.Length > 0 && (workspace.ToolInstance == null || !workspace.ToolInstance.OnWorldEditCommand(this, args.RawArgs)))
@@ -484,6 +507,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             return TextCommandResult.Success();
         }
+
 
         private TextCommandResult loadWorkSpace(TextCommandCallingArgs args)
         {
@@ -499,9 +523,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             int height = (int)args[1];
 
             var centerPos = args.Caller.Pos.AsBlockPos;
-            int cleared = FillArea(null, centerPos.AddCopy(-widthlength, 0, -widthlength), centerPos.AddCopy(widthlength, height, widthlength));
+            var start = centerPos.AddCopy(-widthlength, 0, -widthlength);
+            var end = centerPos.AddCopy(widthlength, height, widthlength);
+            var cleared = FillArea(null, start, end);
 
-            return TextCommandResult.Success(cleared + " Blocks removed");
+            var entitiesRemoved = RemoveEntitiesInArea(start, end);
+            return TextCommandResult.Success(cleared + " Blocks and " + entitiesRemoved +" Entities removed");
         }
 
         private TextCommandResult handleDeleteSelection(TextCommandCallingArgs args)
@@ -511,8 +538,22 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Start marker or end marker not set");
             }
 
-            int cleared = FillArea(null, workspace.StartMarker, workspace.EndMarker);
-            return TextCommandResult.Success(cleared + " marked blocks removed");
+            var cleared = FillArea(null, workspace.StartMarker, workspace.EndMarker);
+            var entitiesRemoved = RemoveEntitiesInArea( workspace.StartMarker, workspace.EndMarker);
+            return TextCommandResult.Success(cleared + " Blocks and " + entitiesRemoved +" Entities removed");
+        }
+
+        private int RemoveEntitiesInArea(BlockPos start, BlockPos end)
+        {
+            var entitiesInsideCuboid =
+                sapi.World.GetEntitiesInsideCuboid(start, end, (e) => !(e is EntityPlayer));
+            foreach (var entity in entitiesInsideCuboid)
+            {
+                workspace.revertableBlockAccess.StoreEntitySpawnToHistory(entity);
+                entity.Die(EnumDespawnReason.Removed);
+            }
+
+            return entitiesInsideCuboid.Length;
         }
 
         private TextCommandResult handleFillSelection(TextCommandCallingArgs args)
@@ -525,12 +566,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             var stack = args.Caller.Player?.InventoryManager.ActiveHotbarSlot.Itemstack;
             if (stack == null || stack.Class == EnumItemClass.Item)
             {
-                return TextCommandResult.Error("Please put the desired block in your active hotbar slot");
+                return TextCommandResult.Error("Please put the desired block in your active hotbar slot ");
             }
 
             int filled = FillArea(stack, workspace.StartMarker, workspace.EndMarker);
 
-            return TextCommandResult.Success(filled + " marked blocks placed");
+            var entitiesInArea = RemoveEntitiesInArea(workspace.StartMarker, workspace.EndMarker);
+            return TextCommandResult.Success(filled + " marked blocks placed and " + entitiesInArea + "removed");
         }
 
         private TextCommandResult handleSelectionInfo(TextCommandCallingArgs args)
@@ -559,18 +601,19 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult handleShiftSelection(TextCommandCallingArgs args)
         {
             var direction = (string)args[0];
+            var amount = args.Parsers[1].IsMissing ? 1 : (int)args[1];
             var facing = blockFacingFromArg(direction, args);
             if (facing == null)
             {
                 return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
             }
-            return HandleShiftCommand(facing.Normali);
+            return HandleShiftCommand(facing.Normali.Clone() * amount);
         }
 
         private TextCommandResult handleShiftSelectionShorthand(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            var amount = args.Parsers[1].IsMissing ? 1 : (int)args[1];
+            var amount = args.Parsers[0].IsMissing ? 1 : (int)args[0];
             return HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali.Clone() * amount);
         }
 
@@ -651,12 +694,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockFacing facing = BlockFacing.FromFirstLetter(direction[0]);
             if (facing != null) return facing;
             
-            /// North: Negative Z
-            /// East: Positive X
-            /// South: Positive Z
-            /// West: Negative X
-            /// Up: Positive Y
-            /// Down: Negative Y
+            // North: Negative Z
+            // East: Positive X
+            // South: Positive Z
+            // West: Negative X
+            // Up: Positive Y
+            // Down: Negative Y
             switch (direction)
             {
                 case "+x":
@@ -724,14 +767,12 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (args.Parsers[0].IsMissing)
             {
-                return TextCommandResult.Success("Import item/block resolving currently " + (!sapi.ObjectCache.ContainsKey("donotResolveImports") || (bool)sapi.ObjectCache["donotResolveImports"] == false ? "on" : "off"));
+                return TextCommandResult.Success("Import item/block resolving currently " + (ReplaceMetaBlocks ? "on" : "off"));
             }
-            else
-            {
-                bool doreplace = (bool)args[0];
-                sapi.ObjectCache["donotResolveImports"] = !doreplace;
-                return TextCommandResult.Success("Import item/block resolving now globally " + (doreplace ? "on" : "off"));
-            }
+
+            var doReplace = (bool)args[0];
+            ReplaceMetaBlocks = doReplace;
+            return TextCommandResult.Success("Import item/block resolving now globally " + (doReplace ? "on" : "off"));
         }
 
         private TextCommandResult handleImport(TextCommandCallingArgs args)
@@ -806,13 +847,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Please mark start and end position");
             }
 
-            IServerPlayer player = sendToClient ? args.Caller.Player as IServerPlayer : null;
+            IServerPlayer player = args.Caller.Player as IServerPlayer;
 
             if ((args[1] as string)?.ToLowerInvariant() == "c")
             {
                 BlockPos st = workspace.StartMarker;
                 BlockPos en = workspace.EndMarker;
-                serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we mex {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0]) }, player);
+                serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we {7} {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0], sendToClient ? "expc" : "exp")  }, player);
             }
 
             return ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, player);
@@ -896,7 +937,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
             int rebuilt = RebuildRainMap();
-            return TextCommandResult.Success("Done, rebuilding {0} map chunks", rebuilt);
+            return TextCommandResult.Success(string.Format("Done, rebuilding {0} map chunks", rebuilt));
         }
 
         private TextCommandResult handleToolModeOff(TextCommandCallingArgs args)

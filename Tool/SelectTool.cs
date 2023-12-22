@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -159,14 +158,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                 worldEdit.SetStartPos(sele.Start.AsBlockPos.ToVec3d());
                 worldEdit.SetEndPos(sele.End.AsBlockPos.ToVec3d());
 
-                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
+                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
             }
             else
             {
                 Vec3d endPos = blockSelection.Position.ToVec3d().Add(0.5,0.5,0.5);
                 worldEdit.SetEndPos(endPos);
 
-                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty);
+                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
             }
 
             base.OnInteractStart(worldEdit, blockSelection);

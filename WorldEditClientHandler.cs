@@ -90,13 +90,20 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         bool isComposing;
         bool beforeAmbientOverride;
+        private bool _showRightSettings = true;
         
         public WorldEditClientHandler(ICoreClientAPI capi)
         {
             this.capi = capi;
-            this.capi.ChatCommands.Create("we")
+            this.capi.ChatCommands.GetOrCreate("we")
                 .WithDescription("World edit toolbar")
-                .HandleWith(CmdEditClient);
+                .HandleWith(CmdEditClient)
+                .BeginSubCommands("rightsettingspanel", "rsp")
+                    .WithDescription("Toggle the visibility of the Right settings panel")
+                    .WithArgs(capi.ChatCommands.Parsers.OptionalBool("setting"))
+                    .HandleWith(HandleToggleRightSettings)
+                .EndSubCommand()
+                ;
             capi.Input.RegisterHotKey("worldedit", Lang.Get("World Edit"), GlKeys.Tilde, HotkeyType.CreativeTool);
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
             capi.Event.LeaveWorld += Event_LeaveWorld;
@@ -363,8 +370,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         toolBarsettings.OnSet = OnSetValueToolbar;
                     }
 
-                    toolBarDialog = new GuiJsonDialog(toolBarsettings, capi);
-                    toolBarDialog.TryOpen();
+                    toolBarDialog = new GuiJsonDialog(toolBarsettings, capi, false);
+                    toolBarDialog.TryOpen(false);
                     if (toolBarDialog != null)
                     {
                         toolBarDialog.OnClosed += () => {
@@ -384,12 +391,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                     dlgsettings.OnGet = OnGetValueSettings;
                     dlgsettings.OnSet = OnSetValueSettings;
 
-                    settingsDialog = new GuiJsonDialog(dlgsettings, capi);
-                    settingsDialog.TryOpen();
+                    settingsDialog = new GuiJsonDialog(dlgsettings, capi, false);
+                    if(_showRightSettings)
+                        settingsDialog.TryOpen();
 
                     JsonDialogSettings controlsSettings = capi.Assets.Get<JsonDialogSettings>(new AssetLocation("dialog/worldedit-controls.json"));
                     controlsSettings.OnSet = OnSetValueControls;
-                    controlsDialog = new GuiJsonDialog(controlsSettings, capi);
+                    controlsDialog = new GuiJsonDialog(controlsSettings, capi, false);
                     controlsDialog.TryOpen();
                 }
                 else
@@ -639,7 +647,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             toolOptionsSettings.OnGet = OnGetValueToolOptions;
 
             isComposing = true;
-            toolOptionsDialog = new GuiJsonDialog(toolOptionsSettings, capi);
+            toolOptionsDialog = new GuiJsonDialog(toolOptionsSettings, capi, false);
             toolOptionsDialog.TryOpen();
             isComposing = false;
         }
@@ -733,6 +741,27 @@ namespace Vintagestory.ServerMods.WorldEdit
             settingsDialog?.Dispose();
         }
 
+        private TextCommandResult HandleToggleRightSettings(TextCommandCallingArgs args)
+        {
+            if (args.Parsers[0].IsMissing)
+            {
+                return TextCommandResult.Success("Right setting panel is: " + (_showRightSettings ? "on" : "off"));
+            }
+            _showRightSettings = (bool)args[0];
+            if (toolBarDialog?.IsOpened() == true)
+            {
+                if (settingsDialog?.IsOpened() == true)
+                {
+                    settingsDialog.TryClose();
+                }
+                else
+                {
+                    settingsDialog?.TryOpen();
+                }
+            }
+
+            return TextCommandResult.Success("Right setting panel now: " + (_showRightSettings ? "on" : "off"));
+        }
     }
 
 

@@ -632,10 +632,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     size = new Vec3i((int)Math.Ceiling(2 * dim1), (int)Math.Ceiling(dim2), (int)Math.Ceiling(2 * dim3));
                     break;
 
-                /// North: Negative Z
-                /// East: Positive X
-                /// South: Positive Z
-                /// West: Negative X
+                // North: Negative Z
+                // East: Positive X
+                // South: Positive Z
+                // West: Negative X
                 case EnumBrushShape.HalfBallUp:
                     positions = HalfBall(-xRadInt, 0, -zRadInt, xRadInt, yRadInt, zRadInt, 0, -yRadInt / 2, 0, xRadSqInv, yRadSqInv, zRadSqInv, xCutRadSqInv, yCutRadSqInv, zCutRadSqInv);
 

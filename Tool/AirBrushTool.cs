@@ -210,7 +210,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (oldBlockId >= 0) worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
             lcgRand.SetWorldSeed(rand.Next());
-            lcgRand.InitPositionSeed(blockSel.Position.X / ba.ChunkSize, blockSel.Position.Z / ba.ChunkSize);
+            lcgRand.InitPositionSeed(blockSel.Position.X / GlobalConstants.ChunkSize, blockSel.Position.Z / GlobalConstants.ChunkSize);
 
             int xRadInt = (int)Math.Ceiling(Radius);
             int yRadInt = (int)Math.Ceiling(Radius);
