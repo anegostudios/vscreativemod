@@ -856,7 +856,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we {7} {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0], sendToClient ? "expc" : "exp")  }, player);
             }
 
-            return ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, player);
+            return ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, sendToClient ? player : null);
         }
 
         private TextCommandResult handleRange(TextCommandCallingArgs args)
@@ -942,8 +942,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult handleToolModeOff(TextCommandCallingArgs args)
         {
-            previewBlocks.ClearChunks();
-            previewBlocks.UnloadUnusedServerChunks();
+            DestroyPreview();
             workspace.ToolsEnabled = false;
             workspace.SetTool(null, sapi);
             workspace.ResendBlockHighlights(this);

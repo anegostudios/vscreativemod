@@ -691,6 +691,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 subDimensionId = sapi.Server.LoadMiniDimension(miniDimension);
                 if (subDimensionId < 0) return null;
                 miniDimension.SetSubDimensionId(subDimensionId);
+                miniDimension.SetSelectionTrackingSubId_Server(subDimensionId);
             }
             else
             {
@@ -703,6 +704,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             rotated.Place(miniDimension, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
             rotated.PlaceDecors(miniDimension, originPos);
             return miniDimension;
+        }
+
+        public void DestroyPreview()
+        {
+            previewBlocks.ClearChunks();
+            previewBlocks.UnloadUnusedServerChunks();
+            SendPreviewOriginToClient(previewBlocks.selectionTrackingOriginalPos, -1);
         }
 
         private void PasteBlockData(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin)
@@ -753,7 +761,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (sendToPlayer != null)
             {
-                serverChannel.SendPacket<SchematicJsonPacket>(new SchematicJsonPacket() { Filename = filename, JsonCode = blockdata.ToJson() }, sendToPlayer);
+                serverChannel.SendPacket(new SchematicJsonPacket() { Filename = filename, JsonCode = blockdata.ToJson() }, sendToPlayer);
                 return TextCommandResult.Success(exported + " blocks schematic sent to client.");
             }
             else

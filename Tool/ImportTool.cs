@@ -354,8 +354,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             if (blockDatas.Length == 0)
             {
-                worldEdit.previewBlocks.ClearChunks();
-                worldEdit.previewBlocks.UnloadUnusedServerChunks();
+                worldEdit.DestroyPreview();
                 return new List<BlockPos>();
             }
 
@@ -367,8 +366,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (pos.Length > 0) CreatePreview(blockData, origin, worldEdit);
             else
             {
-                worldEdit.previewBlocks.ClearChunks();
-                worldEdit.previewBlocks.UnloadUnusedServerChunks();
+                worldEdit.DestroyPreview();
             }
             return new List<BlockPos>(pos);
         }

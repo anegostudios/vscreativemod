@@ -307,8 +307,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             HighlightSelectedArea();
             if (!(ToolInstance is ImportTool && ToolsEnabled))
             {
-                we.previewBlocks.ClearChunks();
-                we.previewBlocks.UnloadUnusedServerChunks();
+                we.DestroyPreview();
             }
 
             if (ToolsEnabled && ToolInstance != null)

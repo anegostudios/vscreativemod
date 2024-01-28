@@ -313,9 +313,13 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void OnReceivedPreviewBlocks(PreviewBlocksPacket msg)
         {
-            IMiniDimension dim = capi.World.GetOrCreateDimension(msg.dimId, msg.pos.ToVec3d());
-            dim.ClearChunks();
-            dim.PreviewPos = msg.pos;
+            capi.World.SetBlocksPreviewDimension(msg.dimId);
+            if (msg.dimId >= 0)
+            {
+                IMiniDimension dim = capi.World.GetOrCreateDimension(msg.dimId, msg.pos.ToVec3d());
+                dim.ClearChunks();
+                dim.selectionTrackingOriginalPos = msg.pos;
+            }
         }
 
         private void OnServerWorkspace(WorldEditWorkspace workspace)
