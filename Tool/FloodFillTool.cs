@@ -214,10 +214,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (inBounds)
                     {
-                        var isBoulder = block.Code.Path.StartsWith("loose");
+                        var isBoulder = block.Code.PathStartsWith("loose");
                         bool fillable =
                             (ignWater || ba.GetBlock(curPos, BlockLayersAccess.Fluid).Id == 0) &&
-                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder)) && !fillablePositions.Contains(curPos)
+                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder))
+                            && !fillablePositions.Contains(curPos)
                         ;
 
                         if (fillable) 
@@ -242,6 +243,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             foreach (BlockPos p in fillablePositions)
             {
+                if (ba.GetBlock(p).IsLiquid())
+                {
+                    ba.SetBlock(0, p, BlockLayersAccess.Fluid);
+                }
                 ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 

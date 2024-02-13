@@ -907,7 +907,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     foreach (string name in ToolRegistry.ToolTypes.Keys)
                     {
-                        if (name.ToLowerInvariant().StartsWith(suppliedToolname.ToLowerInvariant()))
+                        if (name.StartsWith(suppliedToolname, StringComparison.InvariantCultureIgnoreCase))
                         {
                             toolname = name;
                             break;

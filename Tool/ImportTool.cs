@@ -6,6 +6,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -130,7 +131,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         string filename = Path.GetFileName(args[i]);
                         string filepath = Path.Combine(exportFolderPath, args[i]);
 
-                        if (!filename.EndsWith("*") && !filename.EndsWith("/") && !filename.EndsWith(".json")) filename += ".json";
+                        if (!filename.EndsWith('*') && !filename.EndsWith('/') && !filename.EndsWithOrdinal(".json")) filename += ".json";
 
                         try
                         {

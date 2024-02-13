@@ -226,7 +226,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
 
-                if (!outfilepath.EndsWith(".json"))
+                if (!outfilepath.EndsWithOrdinal(".json"))
                 {
                     outfilepath += ".json";
                 }

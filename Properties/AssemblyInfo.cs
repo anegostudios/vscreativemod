@@ -40,6 +40,7 @@ using Vintagestory.API.Config;
 [assembly: ModInfo("Creative Mode", "creative",
     Version = GameVersion.ShortGameVersion,
     NetworkVersion = GameVersion.NetworkVersion,
+    CoreMod = true,
     Description = "World editing, worldedit GUI and super flat world generation",
     IconPath = "game/textures/gui/modicon.png",
     Authors = new[] { "Tyron" },
