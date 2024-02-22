@@ -4,6 +4,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.CommandAbbr;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
@@ -285,6 +286,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithDesc("Replace a block material with another one, only if supported by the block. Hotbarslot 0: Search material, Active hand slot: Replace material")
                     .HandleWith(onReplaceMaterial)
                 .EndSub()
+                .BeginSub("wipeworkspace")
+                    .WithDesc("Clear a players worldedit workspace data and settings")
+                    .WithArgs(parsers.PlayerUids("player"))
+                    .HandleWith(WipeWorkspace)
+                .EndSub()
                 .Validate()
             ;
 
@@ -331,6 +337,47 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .EndSub()
                     ;
             }
+        }
+
+        private TextCommandResult WipeWorkspace(TextCommandCallingArgs args)
+        {
+            var players = (PlayerUidName[])args.Parsers[0].GetValue();
+            var results = new LimitedList<string>(10);
+            
+            if (players.Length == 0)
+            {
+                return TextCommandResult.Error(Lang.Get("No players found that match your selector"));
+            }
+
+            foreach (var parsedplayer in players)
+            {
+                if (workspaces.ContainsKey(parsedplayer.Uid))
+                {
+                    workspaces.Remove(parsedplayer.Uid);
+                    
+                    var revertibleBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
+                    var newWorkspace = new WorldEditWorkspace(sapi.World, revertibleBlockAccess);
+                    revertibleBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, newWorkspace);
+                    
+                    workspaces[parsedplayer.Uid] = newWorkspace;
+                    newWorkspace.PlayerUID = parsedplayer.Uid;
+                    
+                    results.Add($"Workspace for {parsedplayer.Name} deleted");
+                    SendPlayerWorkSpace(parsedplayer.Uid);
+                }
+                else
+                {
+                    results.Add($"No Workspace for {parsedplayer.Name} exists");
+                }
+                
+            }
+
+            if (players.Length <= 10)
+            {
+                return TextCommandResult.Success(string.Join(", ", results));
+            }
+
+            return TextCommandResult.Success(Lang.Get("Successfully executed commands on {0} players", players.Length));
         }
 
         private TextCommandResult handleConstrain(TextCommandCallingArgs args)
