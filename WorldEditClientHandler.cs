@@ -301,7 +301,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 capi.Event.RegisterCallback((dt) =>
                 {
                     clientChannel.SendPacket<SchematicJsonPacket>(new SchematicJsonPacket() { Filename = info.Name, JsonCode = json });
-                }, 20);
+                }, 20, true);
             }
         }
 
