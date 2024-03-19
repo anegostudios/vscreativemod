@@ -435,9 +435,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     tree.SetInt("posy", val.Key.Y);
                     tree.SetInt("posz", val.Key.Z);
 
-                    if (be is IRotatable)
+                    if (be is IRotatable rotatable)
                     {
-                        (be as IRotatable).OnTransformed(sapi.World ,tree, 0, null, null, dir.Axis);
+                        var empty = new Dictionary<int, AssetLocation>();
+                        rotatable.OnTransformed(sapi.World ,tree, 0, empty, empty, dir.Axis);
                     }
 
                     be.FromTreeAttributes(tree, sapi.World);

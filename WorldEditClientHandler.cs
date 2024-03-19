@@ -483,7 +483,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     break;
                 case "cloudypos":
-                    capi.SendChatMessage("/weather cloudypos " + newValue.ToFloat()/255f);
+                    capi.SendChatMessage("/weather cloudypos " + (newValue.ToFloat() / 255f).ToString(GlobalConstants.DefaultCultureInfo));
                     break;
                 case "weatherpattern":
                     capi.SendChatMessage("/weather seti " + newValue);
