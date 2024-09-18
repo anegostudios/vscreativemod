@@ -1,26 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using ProperVersion;
+using System.Linq;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
-using Vintagestory.API.Util;
+using VSCreativeMod;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class ImportTool : ToolBase
     {
-        Random rand = new Random();
-        BlockSchematic[] blockDatas;
+        private readonly Random _rand;
 
-        int nextRnd = 0;
+        public override bool ScrollEnabled => true;
 
-        public string BlockDataFilenames
+        public string BlockDataFilename
         {
-            get { return workspace.StringValues["std.pasteToolFilenames"]; }
-            set { workspace.StringValues["std.pasteToolFilenames"] = value; }
+            get { return workspace.StringValues["std.fileNames"]; }
+            set { workspace.StringValues["std.fileNames"] = value; }
         }
 
         public EnumOrigin Origin
@@ -29,13 +29,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.pasteToolOrigin"] = (int)value; }
         }
 
-
         public EnumReplaceMode ReplaceMode
         {
             get { return (EnumReplaceMode)workspace.IntValues["std.importReplaceMode"]; }
             set { workspace.IntValues["std.importReplaceMode"] = (int)value; }
         }
-
 
         public bool RandomRotate
         {
@@ -43,129 +41,120 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.pasteToolRandomRotate"] = value ? 1 : 0; }
         }
 
+        public bool UpdatePreviewPos
+        {
+            get { return (EnumOrigin)workspace.IntValues["std.updatePreviewPos"] > 0; }
+            set { workspace.IntValues["std.updatePreviewPos"] = value ? 1 : 0; }
+        }
+
+        public bool PreviewAtPlayer
+        {
+            get { return (EnumOrigin)workspace.IntValues["std.previewAtPlayer"] > 0; }
+            set { workspace.IntValues["std.previewAtPlayer"] = value ? 1 : 0; }
+        }
+
         public override Vec3i Size
         {
             get
             {
-                if (blockDatas == null) return new Vec3i(0, 0, 0);
-                BlockSchematic bd = blockDatas[nextRnd];
+                if (workspace.PreviewBlockData == null) return new Vec3i(0, 0, 0);
+                BlockSchematic bd = workspace.PreviewBlockData;
                 return new Vec3i(bd.SizeX, bd.SizeY, bd.SizeZ);
             }
         }
 
+        public ImportTool()
+        {
+        }
+
         public ImportTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
-            if (!workspace.StringValues.ContainsKey("std.pasteToolFilenames")) BlockDataFilenames = null;
+            if (!workspace.StringValues.ContainsKey("std.fileNames")) BlockDataFilename = "\n\n\n";
             if (!workspace.IntValues.ContainsKey("std.pasteToolOrigin")) Origin = EnumOrigin.BottomCenter;
             if (!workspace.IntValues.ContainsKey("std.importReplaceMode")) ReplaceMode = EnumReplaceMode.Replaceable;
             if (!workspace.IntValues.ContainsKey("std.pasteToolRandomRotate")) RandomRotate = false;
-            if (workspace.clipboardBlockData != null) blockDatas = new[] { workspace.clipboardBlockData };
+            if (!workspace.IntValues.ContainsKey("std.updatePreviewPos")) UpdatePreviewPos = true;
+            if (!workspace.IntValues.ContainsKey("std.previewAtPlayer")) PreviewAtPlayer = true;
+            if (workspace.clipboardBlockData != null) workspace.PreviewBlockData = workspace.clipboardBlockData;
+            _rand = new();
         }
 
-        public void LoadBlockdatas(ICoreServerAPI api, WorldEdit worldEdit = null)
+        public void SetBlockDatas(WorldEdit worldEdit, BlockSchematic schematics)
         {
-            this.blockDatas = new BlockSchematic[0];
+            workspace.PreviewBlockData = schematics;
+            workspace.ResendBlockHighlights();
+        }
 
-            if (BlockDataFilenames == null) return;
-            var filenames = BlockDataFilenames.Split(',');
 
-            List<BlockSchematic> blockDatas = new List<BlockSchematic>();
-            var exportFolderPath = api.GetOrCreateDataPath("WorldEdit");
-
-            var failed = 0;
-
-            for (var i = 0; i < filenames.Length; i++)
+        private void Move(Vec3i dir)
+        {
+            if (workspace.PreviewPos == null)
             {
-                var infilepath = Path.Combine(exportFolderPath, filenames[i]);
-
-                var error = "";
-                var blockData = BlockSchematic.LoadFromFile(infilepath, ref error);
-                if (blockData == null)
-                {
-                    worldEdit?.Bad(error);
-                    failed++;
-                } else
-                {
-                    blockDatas.Add(blockData);
-                }
+                if (workspace.StartMarker == null) return;
+                workspace.PreviewPos = workspace.StartMarker.Copy();
             }
 
-            if (failed > 0)
-            {
-                worldEdit?.Bad(failed + " schematics couldn't be loaded.");
-            }
+            var vec = dir * workspace.StepSize;
 
-            this.blockDatas = blockDatas.ToArray();
+            workspace.PreviewPos.Add(vec);
+            workspace.SendPreviewOriginToClient(workspace.PreviewPos, workspace.previewBlocks.subDimensionId);
         }
-
-        public void SetBlockDatas(WorldEdit worldEdit, BlockSchematic[] schematics)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
-            this.blockDatas = schematics;
-            nextRnd = rand.Next(blockDatas.Length);
-            workspace.ResendBlockHighlights(worldEdit);
-        }
-
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
-        {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
+                case "north":
+                case "east":
+                case "west":
+                case "south":
+                case "up":
+                case "down":
+                {
+                    BlockFacing facing = BlockFacing.FromCode(args[0]);
+                    Move(facing.Normali);
+                    return true;
+                }
+                case "look":
+                {
+                    var lookVec = player.Entity.SidedPos.GetViewVector();
+                    var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
+                    Move(facing.Normali);
+                    return true;
+                }
                 case "imc":
                     if (workspace.clipboardBlockData != null)
                     {
-                        blockDatas = new[] { workspace.clipboardBlockData };
-                        worldEdit.Good("Ok, using copied blockdata");
-                        nextRnd = 0;
-                        workspace.ResendBlockHighlights(worldEdit);
-                    } else
-                    {
-                        worldEdit.Good("No copied block data available");
+                        workspace.PreviewBlockData = workspace.clipboardBlockData;
+                        if (workspace.PreviewPos == null)
+                        {
+                            workspace.PreviewPos = player.Entity.Pos.AsBlockPos;
+                        }
+
+                        WorldEdit.Good(player, "Ok, using copied blockdata");
+                        workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
                     }
+                    else
+                    {
+                        WorldEdit.Good(player, "No copied block data available");
+                    }
+
                     return true;
 
                 case "ims":
-                    string exportFolderPath = worldEdit.sapi.GetOrCreateDataPath("WorldEdit");
-                    List<string> filenames = new List<string>();
+                    var exportFolderPath = worldEdit.sapi.GetOrCreateDataPath("WorldEdit");
 
-                    for (int i = 1; i < args.Length; i++)
+                    var filename = args[1].StartsWith(Path.DirectorySeparatorChar) ? args[1].Substring(1) : args[1];
+                    var filepath = Path.Combine(exportFolderPath, filename);
+                    string error = null;
+                    workspace.PreviewBlockData = BlockSchematic.LoadFromFile(filepath, ref error);
+                    if (workspace.PreviewPos == null)
                     {
-                        string filename = Path.GetFileName(args[i]);
-                        string filepath = Path.Combine(exportFolderPath, args[i]);
-
-                        if (!filename.EndsWith('*') && !filename.EndsWith('/') && !filename.EndsWithOrdinal(".json")) filename += ".json";
-
-                        try
-                        {
-                            string[] foundFilePaths = Directory.GetFiles(Path.GetDirectoryName(filepath), filename);
-
-                            for (int j = 0; j < foundFilePaths.Length; j++)
-                            {
-                                filenames.Add(foundFilePaths[j].Substring(exportFolderPath.Length + 1));
-                            }
-                        } catch (Exception)
-                        {
-                            worldEdit.Bad("Unable to read files from this source");
-                            return true;
-                        }
+                        workspace.PreviewPos = (worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID).Entity.Pos.AsBlockPos);
                     }
 
-                    
-
-                    if (filenames.Count > 0)
-                    {
-                        BlockDataFilenames = string.Join(",", filenames);
-                        LoadBlockdatas(worldEdit.sapi, worldEdit);
-                        worldEdit.Good("Ok, found " + filenames.Count + " block data source files");
-                    } else
-                    {
-                        BlockDataFilenames = null;
-                        this.blockDatas = new BlockSchematic[0];
-
-                        worldEdit.Good("No source files under this name/wildcard found");
-                    }
-
-                    nextRnd = rand.Next(blockDatas.Length);
-
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
 
                     return true;
 
@@ -182,10 +171,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
                     }
 
-                    worldEdit.Good("Paste origin " + Origin + " set.");
-
-                    workspace.ResendBlockHighlights(worldEdit);
-
+                    workspace.ResendBlockHighlights();
+                    WorldEdit.Good(player, "Paste origin " + Origin + " set.");
                     return true;
 
                 case "tm":
@@ -201,32 +188,31 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
                     }
 
-                    worldEdit.Good("Replace mode " + ReplaceMode + " set.");
-                    workspace.ResendBlockHighlights(worldEdit);
+                    WorldEdit.Good(player, "Replace mode " + ReplaceMode + " set.");
+                    workspace.ResendBlockHighlights();
 
                     return true;
 
                 case "imrrand":
                     RandomRotate = args.Length > 1 && (args[1] == "1" || args[1] == "true" || args[1] == "on");
 
-                    worldEdit.Good("Random rotation now " + (RandomRotate ? "on" : "off"));
+                    WorldEdit.Good(player, "Random rotation now " + (RandomRotate ? "on" : "off"));
 
                     SetRandomAngle(worldEdit.sapi.World);
 
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
 
                     return true;
 
                 case "imn":
-                    nextRnd = rand.Next(blockDatas.Length);
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
                     break;
 
 
                 case "imr":
-                    if (blockDatas == null || blockDatas.Length == 0)
+                    if (workspace.PreviewBlockData == null)
                     {
-                        worldEdit.Bad("Please define a block data source first.");
+                        WorldEdit.Bad(player, "Please define a block data source first.");
                         return true;
                     }
 
@@ -236,148 +222,176 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         if (!int.TryParse(args[1], out angle))
                         {
-                            worldEdit.Bad("Invalid Angle (not a number)");
+                            WorldEdit.Bad(player, "Invalid Angle (not a number)");
                             return true;
                         }
                     }
+
                     if (angle < 0) angle += 360;
 
                     if (angle != 0 && angle != 90 && angle != 180 && angle != 270)
                     {
-                        worldEdit.Bad("Invalid Angle, allowed values are -270, -180, -90, 0, 90, 180 and 270");
+                        WorldEdit.Bad(player, "Invalid Angle, allowed values are -270, -180, -90, 0, 90, 180 and 270");
                         return true;
                     }
 
-                    for (int i = 0; i < blockDatas.Length; i++)
-                    {
-                        blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, angle, null);
-                    }
+                    workspace.PreviewBlockData.TransformWhilePacked(worldEdit.sapi.World, Origin, angle, null);
 
-                    workspace.ResendBlockHighlights(worldEdit);
-
-                    worldEdit.Good("Ok, all schematics rotated by " + angle + " degrees");
-
+                    workspace.ResendBlockHighlights();
                     return true;
 
 
                 case "imflip":
-                    if (blockDatas == null || blockDatas.Length == 0)
+                    if (workspace.PreviewBlockData == null)
                     {
-                        worldEdit.Bad("Please define a block data source first.");
+                        WorldEdit.Bad(player, "Please define a block data source first.");
                         return true;
                     }
 
-                    for (int i = 0; i < blockDatas.Length; i++)
-                    {
-                        blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, EnumAxis.Y);
-                    }
+                    workspace.PreviewBlockData.TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, EnumAxis.Y);
 
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
 
-                    worldEdit.Good("Ok, imported sources flipped");
+                    WorldEdit.Good(player, "Ok, imported sources flipped");
 
 
                     return true;
 
 
                 case "immirror":
-                    if (blockDatas == null || blockDatas.Length == 0)
+                    if (workspace.PreviewBlockData == null)
                     {
-                        worldEdit.Bad("Please define a block data source first.");
+                        WorldEdit.Bad(player, "Please define a block data source first.");
                         return true;
                     }
 
                     EnumAxis axis = EnumAxis.X;
                     if (args.PopWord().ToLowerInvariant() == "z") axis = EnumAxis.Z;
 
-                    for (int i = 0; i < blockDatas.Length; i++)
-                    {
-                        blockDatas[i].TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, axis);
-                    }
+                    workspace.PreviewBlockData.TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, 0, axis);
 
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
 
-                    worldEdit.Good("Ok, imported sources mirrored around " + axis + " axis");
+                    WorldEdit.Good(player, "Ok, imported sources mirrored around " + axis + " axis");
 
 
+                    return true;
+                case "commit":
+                    if (Commit(worldEdit))
+                        return true;
+                    break;
+                case "updatePreviewPos":
+                    UpdatePreviewPos = args[1] == "1";
+                    WorldEdit.Good(player, workspace.ToolName + " Update preview position on right click set to " + UpdatePreviewPos);
+                    return true;
+                case "previewAtPlayer":
+                    PreviewAtPlayer = args[1] == "1";
+                    WorldEdit.Good(player, workspace.ToolName + " Spawn the preview at player set to " + PreviewAtPlayer);
                     return true;
             }
 
             return false;
         }
 
-        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
+        private bool Commit(WorldEdit worldEdit)
         {
-            
-        }
+            if (workspace.PreviewBlockData == null) return true;
 
-        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
-        {
-            if (blockDatas == null)
-            {
-                LoadBlockdatas(worldEdit.sapi);
-            }
-            if (blockDatas.Length == 0) return;
+            workspace.PreviewBlockData.Init(ba);
+            workspace.PreviewBlockData.Place(ba, worldEdit.sapi.World, workspace.PreviewPos, ReplaceMode, WorldEdit.ReplaceMetaBlocks);
 
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-
-            BlockSchematic blockData = blockDatas[nextRnd];
-            nextRnd = rand.Next(blockDatas.Length);
-
-            BlockPos originPos = blockData.GetStartPos(blockSel.Position, Origin);
-            blockData.Init(ba);
-            blockData.Place(ba, worldEdit.sapi.World, originPos, ReplaceMode, WorldEdit.ReplaceMetaBlocks);
-
-            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position));
-            blockData.PlaceDecors(ba, originPos);
+            workspace.PreviewBlockData.PlaceDecors(ba, workspace.PreviewPos);
             ba.Commit();
-            blockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes, false, null, 0, null, WorldEdit.ReplaceMetaBlocks);
+            workspace.PreviewBlockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, workspace.PreviewPos,
+                workspace.PreviewBlockData.BlockCodes, workspace.PreviewBlockData.ItemCodes, false, null, 0, null, WorldEdit.ReplaceMetaBlocks);
             ba.CommitBlockEntityData();
 
             if (RandomRotate) SetRandomAngle(worldEdit.sapi.World);
-            //workspace.ResendBlockHighlights(worldEdit);
+            workspace.ResendBlockHighlights();
+            return true;
         }
 
+        public override void OnInteractStart(WorldEdit worldEdit, BlockSelection blockSelection)
+        {
+            if (blockSelection == null || workspace.PreviewBlockData == null) return;
+
+            if (UpdatePreviewPos)
+            {
+                var origin = workspace.PreviewBlockData.GetStartPos(blockSelection.Position.UpCopy(), Origin);
+                workspace.PreviewPos = origin;
+            }
+            Commit(worldEdit);
+        }
+
+        public override void OnAttackStart(WorldEdit worldEdit, BlockSelection blockSelection)
+        {
+            if (blockSelection == null || workspace.PreviewBlockData == null) return;
+
+            var origin = workspace.PreviewBlockData.GetStartPos(blockSelection.Position.UpCopy(), Origin);
+            workspace.PreviewPos = origin;
+            if (workspace.previewBlocks == null)
+            {
+                workspace.ResendBlockHighlights();
+            }
+            else
+            {
+                workspace.SendPreviewOriginToClient(workspace.PreviewPos, workspace.previewBlocks.subDimensionId);
+            }
+        }
 
         void SetRandomAngle(IWorldAccessor world)
         {
-            for (int i = 0; i < blockDatas.Length; i++)
+            workspace.PreviewBlockData.TransformWhilePacked(world, EnumOrigin.BottomCenter, _rand.Next(4) * 90, null);
+        }
+
+        public override void Load(ICoreAPI api)
+        {
+            var folder = api.GetOrCreateDataPath("WorldEdit");
+            var names = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories).Select(p => p.Substring(folder.Length)).ToList();
+            var join = string.Join("||", names);
+            BlockDataFilename = join + "\n" + join + "\n";
+
+            if (workspace.PreviewBlockData == null) return;
+
+            if (workspace.PreviewPos == null)
             {
-                blockDatas[i].TransformWhilePacked(world, EnumOrigin.BottomCenter, rand.Next(4) * 90, null);
+                if (!PreviewAtPlayer && workspace.StartMarker != null)
+                {
+                    workspace.PreviewPos = workspace.StartMarker.Copy();
+                }
+                else
+                {
+                    workspace.PreviewPos = api.World.PlayerByUid(workspace.PlayerUID).Entity.Pos.AsBlockPos;
+                }
             }
         }
 
-        public override List<BlockPos> GetBlockHighlights(WorldEdit worldEdit)
+        public override void Unload(ICoreAPI api)
         {
-            if (blockDatas == null)
-            {
-                LoadBlockdatas(worldEdit.sapi, worldEdit);
-            }
-            if (blockDatas.Length == 0)
-            {
-                worldEdit.DestroyPreview();
-                return new List<BlockPos>();
-            }
-
-            BlockSchematic blockData = blockDatas[nextRnd];
-
-            BlockPos origin = blockData.GetStartPos(new BlockPos(), Origin);
-            BlockPos[] pos = blockData.GetJustPositions(origin);
-
-            if (pos.Length > 0) CreatePreview(blockData, origin, worldEdit);
-            else
-            {
-                worldEdit.DestroyPreview();
-            }
-            return new List<BlockPos>(pos);
+            workspace.PreviewPos = null;
+            workspace.PreviewBlockData = null;
         }
 
-        public virtual void CreatePreview(BlockSchematic blockData, BlockPos origin, WorldEdit worldEdit)
+        public override List<SkillItem> GetAvailableModes(ICoreClientAPI capi)
         {
-            worldEdit.previewBlocks.ClearChunks();
-            var dim = worldEdit.CreateDimensionFromSchematic(blockData, origin, EnumOrigin.StartPos, worldEdit.previewBlocks);
-            worldEdit.previewBlocks.UnloadUnusedServerChunks();
-            worldEdit.SendPreviewOriginToClient(origin, dim.subDimensionId);
+            var move = EnumWeToolMode.Move.ToString();
+            var rotate = EnumWeToolMode.Rotate.ToString();
+            var multilineItems = new List<SkillItem>()
+            {
+                new()
+                {
+                    Name = Lang.Get(move),
+                    Code = new AssetLocation(move)
+                },
+                new()
+                {
+                    Texture = capi.Gui.LoadSvgWithPadding(new AssetLocation("textures/icons/worldedit/rotate.svg"), 48, 48, 5, ColorUtil.WhiteArgb),
+                    Name = Lang.Get(rotate),
+                    Code = new AssetLocation(rotate)
+                }
+            };
+            multilineItems[0].WithIcon(capi, "move");
+            return multilineItems;
         }
     }
 }

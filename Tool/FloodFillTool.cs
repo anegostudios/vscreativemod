@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
@@ -9,7 +9,6 @@ namespace Vintagestory.ServerMods.WorldEdit
     public class FloodFillTool : ToolBase
     {
         int mapheight;
-        Random rand = new Random();
 
         public int SearchRadius
         {
@@ -53,6 +52,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.ignoreLooseSurfaceItems"] = value ? 1 : 0; }
         }
 
+        Queue<Vec4i> bfsQueue = new Queue<Vec4i>();
+        HashSet<BlockPos> fillablePositions = new HashSet<BlockPos>();
+
+        public FloodFillTool()
+        {
+        }
 
         public FloodFillTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
@@ -66,8 +71,10 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args.PopWord())
             {
                 case "tr":
@@ -75,7 +82,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         int rad = (int)args.PopInt(32);
                         SearchRadius = rad;
 
-                        worldEdit.Good(workspace.ToolName + " search radius " + SearchRadius + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " search radius " + SearchRadius + " set.");
                         return true;
                     }
 
@@ -84,41 +91,41 @@ namespace Vintagestory.ServerMods.WorldEdit
                         int rl = (int)args.PopInt(6000);
                         ReplaceableLevel = rl;
 
-                        worldEdit.Good(workspace.ToolName + " replaceable level " + rl + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " replaceable level " + rl + " set.");
                         return true;
                     }
 
                 case "tce":
                     {
                         CheckEnclosure = (bool)args.PopBool(true);
-                        worldEdit.Good(workspace.ToolName + " check enclosure set to " + CheckEnclosure);
+                        WorldEdit.Good(player, workspace.ToolName + " check enclosure set to " + CheckEnclosure);
                         return true;
                     }
 
                 case "tm":
                     {
                         Mode = (int)args.PopInt(2);
-                        worldEdit.Good(workspace.ToolName + " mode set to " + Mode + "D");
+                        WorldEdit.Good(player, workspace.ToolName + " mode set to " + Mode + "D");
                         return true;
                     }
 
                 case "iw":
                     {
                         IgnoreWater = (bool)args.PopBool(true);
-                        worldEdit.Good(workspace.ToolName + " IgnoreWater set to " + IgnoreWater);
+                        WorldEdit.Good(player, workspace.ToolName + " IgnoreWater set to " + IgnoreWater);
                         return true;
                     }
 
                 case "ip":
                 {
                     IgnorePlants = (bool)args.PopBool(true);
-                    worldEdit.Good(workspace.ToolName + " IgnorePlants set to " + IgnorePlants);
+                        WorldEdit.Good(player, workspace.ToolName + " IgnorePlants set to " + IgnorePlants);
                     return true;
                 }
                 case "ii":
                 {
                     IgnoreLooseSurfaceItems = (bool)args.PopBool(true);
-                    worldEdit.Good(workspace.ToolName + " IgnoreLooseSurfaceItems set to " + IgnoreLooseSurfaceItems);
+                        WorldEdit.Good(player, workspace.ToolName + " IgnoreLooseSurfaceItems set to " + IgnoreLooseSurfaceItems);
                     return true;
                 }
             }
@@ -130,57 +137,40 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             get { return new Vec3i(0, 0, 0); }
         }
-        
+
 
         public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            ApplyTool(worldEdit, blockSel.Position, -1, blockSel.Face, null, true);
+            var oldBlockId = ba.GetBlock(blockSel.Position).Id;
+            ApplyTool(worldEdit, blockSel.Position, oldBlockId, blockSel, null, true);
         }
 
-        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSelection, ItemStack withItemStack)
         {
-            ApplyTool(worldEdit, blockSel.Position, oldBlockId, blockSel.Face, withItemStack);
+            var placedBlock = ba.GetBlock(blockSelection.Position);
+            PlaceOldBlock(worldEdit, oldBlockId, blockSelection, placedBlock);
+            ApplyTool(worldEdit, blockSelection.Position, oldBlockId, blockSelection, withItemStack);
         }
 
-        private void ApplyTool(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockFacing onBlockFace, ItemStack withItemstack, bool remove = false)
+        private void ApplyTool(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockSelection blockSelection, ItemStack withItemstack, bool remove = false)
         {
             mapheight = worldEdit.sapi.WorldManager.MapSizeY;
 
-            Block block = ba.GetBlock(pos);
-            if (oldBlockId >= 0)
-            {
-                if (block.ForFluidsLayer)
-                {
-                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos, BlockLayersAccess.Fluid);
-                }
-                else
-                {
-                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, pos);
-                }
-
-            } else
-            {
-                block = worldEdit.sapi.World.GetBlock(0);
-            }
-
-            FloodFillAt(worldEdit, block, withItemstack, pos.X, pos.Y, pos.Z);
+            var withItemstackBlock = remove ? ba.GetBlock(0) : withItemstack.Block;
+            FloodFillAt(worldEdit, withItemstackBlock, withItemstack, pos.X, pos.Y, pos.Z, remove, oldBlockId);
 
             ba.Commit();
         }
 
 
-
-        Queue<Vec4i> bfsQueue = new Queue<Vec4i>();
-        HashSet<BlockPos> fillablePositions = new HashSet<BlockPos>();
-
-
-        public void FloodFillAt(WorldEdit worldEdit, Block blockToPlace, ItemStack withItemStack, int posX, int posY, int posZ)
+        public void FloodFillAt(WorldEdit worldEdit, Block blockToPlace, ItemStack withItemStack, int posX, int posY, int posZ, bool remove, int oldBlockId)
         {
+            var player = (IServerPlayer)worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
             bfsQueue.Clear();
             fillablePositions.Clear();
 
-            
+
             if (posY <= 0 || posY >= mapheight - 1) return;
 
             bfsQueue.Enqueue(new Vec4i(posX, posY, posZ, 0));
@@ -207,9 +197,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                 foreach (BlockFacing facing in faces)
                 {
                     curPos.Set(bpos.X + facing.Normali.X, bpos.Y + facing.Normali.Y, bpos.Z + facing.Normali.Z);
-                    
+
                     Block block = ba.GetBlock(curPos);
-                    
+
                     bool inBounds = bpos.W < radius;
 
                     if (inBounds)
@@ -220,8 +210,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                             (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder))
                             && !fillablePositions.Contains(curPos)
                         ;
+                        if (remove)
+                        {
+                            fillable &= block.Id == oldBlockId;
+                        }
 
-                        if (fillable) 
+                        if (fillable)
                         {
                             bfsQueue.Enqueue(new Vec4i(curPos.X, curPos.Y, curPos.Z, bpos.W + 1));
                             fillablePositions.Add(curPos.Copy());
@@ -234,7 +228,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         {
                             fillablePositions.Clear();
                             bfsQueue.Clear();
-                            worldEdit.Bad("Cannot flood fill here, not enclosed area. Enforce enclosed area or disable enclosure check.");
+                            WorldEdit.Bad(player, "Cannot flood fill here, not enclosed area. Enforce enclosed area or disable enclosure check.");
                             break;
                         }
                     }
@@ -250,8 +244,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
-            worldEdit.Good(fillablePositions.Count + " blocks placed");
+            WorldEdit.Good(player, fillablePositions.Count + " blocks placed");
         }
-
     }
 }

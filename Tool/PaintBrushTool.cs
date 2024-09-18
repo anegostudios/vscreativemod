@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -37,18 +38,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
     public class PaintBrushTool : ToolBase
     {
-        public static string[][] dimensionNames = new string[][]
-        {
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "Width", "Height", "Length" },
-            new string[] { "X-Radius", "Height", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-            new string[] { "X-Radius", "Y-Radius", "Z-Radius" },
-        };
+        public static string[][] dimensionNames;
 
         protected BlockPos[] brushPositions;
 
@@ -124,7 +114,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return size; }
         }
 
-        Vec3i size;
+        protected internal Vec3i size;
+
+        public PaintBrushTool()
+        {
+        }
 
         public PaintBrushTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
@@ -143,12 +137,27 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey(Prefix + "Shape")) BrushShape = EnumBrushShape.Ball;
             if (!workspace.IntValues.ContainsKey(Prefix + "DepthLimit")) DepthLimit = EnumDepthLimit.NoLimit;
 
+            dimensionNames = new []
+            {
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "Width", "Height", "Length" },
+                new [] { "X-Radius", "Height", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+                new [] { "X-Radius", "Y-Radius", "Z-Radius" },
+            };
+
             GenBrush();
         }
 
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
                 case "pp":
@@ -160,10 +169,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         PlacementPercentage = percentage;
                     }
 
-                    worldEdit.Good(workspace.ToolName + " placement percentage " + (int)(percentage) + "% set.");
+                    WorldEdit.Good(player, workspace.ToolName + " placement percentage " + (int)(percentage) + "% set.");
 
                     GenBrush();
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
 
                     return true;
 
@@ -181,8 +190,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     BrushMode = brushMode;
-                    worldEdit.Good(workspace.ToolName + " mode " + brushMode + " set.");
-                    workspace.ResendBlockHighlights(worldEdit);
+                    WorldEdit.Good(player, workspace.ToolName + " mode " + brushMode + " set.");
+                    workspace.ResendBlockHighlights();
 
                     return true;
 
@@ -200,8 +209,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     DepthLimit = depthLimit;
-                    worldEdit.Good(workspace.ToolName + " depth limit set to " + depthLimit);
-                    workspace.ResendBlockHighlights(worldEdit);
+                    WorldEdit.Good(player, workspace.ToolName + " depth limit set to " + depthLimit);
+                    workspace.ResendBlockHighlights();
                     return true;
 
                 case "ts":
@@ -219,9 +228,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     BrushShape = shape;
 
-                    worldEdit.Good(workspace.ToolName + " shape " + BrushShape + " set.");
+                    WorldEdit.Good(player, workspace.ToolName + " shape " + BrushShape + " set.");
                     GenBrush();
-                    workspace.ResendBlockHighlights(worldEdit);
+                    workspace.ResendBlockHighlights();
                     return true;
 
                 case "tsx":
@@ -248,10 +257,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + BrushDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
 
-                        worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
 
                         return true;
                     }
@@ -289,10 +298,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + BrushDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
 
-                        worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
                     }
                     return true;
 
@@ -322,10 +331,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + CutoutDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + CutoutDim3;
 
-                        worldEdit.Good(workspace.ToolName + " cutout dimensions " + text + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " cutout dimensions " + text + " set.");
 
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
 
                         return true;
                     }
@@ -363,10 +372,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + CutoutDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + CutoutDim3;
 
-                        worldEdit.Good("Cutout " + workspace.ToolName + " dimensions " + text + " set.");
+                        WorldEdit.Good(player, "Cutout " + workspace.ToolName + " dimensions " + text + " set.");
 
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
                     }
                     return true;
 
@@ -379,9 +388,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                         string text = dimensionNames[(int)BrushShape][0] + "=" + BrushDim1;
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + BrushDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
-                        worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " dimensions " + text + " set.");
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
                     }
                     return true;
 
@@ -394,9 +403,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                         string text = dimensionNames[(int)BrushShape][0] + "=" + BrushDim1;
                         text += ", " + dimensionNames[(int)BrushShape][1] + "=" + BrushDim2;
                         text += ", " + dimensionNames[(int)BrushShape][2] + "=" + BrushDim3;
-                        worldEdit.Good(workspace.ToolName + " dimensions " + text + " set.");
+                        WorldEdit.Good(player, workspace.ToolName + " dimensions " + text + " set.");
                         GenBrush();
-                        workspace.ResendBlockHighlights(worldEdit);
+                        workspace.ResendBlockHighlights();
                     }
                     return true;
             }
@@ -404,35 +413,25 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-
-        public override bool ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        public override void ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
-            return PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
+            PlaceOldBlock(worldEdit, oldBlockId, blockSel, placedBlock);
+            PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
+            ba.Commit();
         }
 
-        public virtual bool PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) { 
-            if (BrushDim1 <= 0) return false;
+        public virtual void PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) {
+            if (BrushDim1 <= 0) return;
 
             Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
 
-            int selectedBlockId = selectedBlock.BlockId;
-
-            if (oldBlockId >= 0)
-            {
-                if (placedBlock.ForFluidsLayer)
-                {
-                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position, BlockLayersAccess.Fluid);
-                } else
-                {
-                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-                }
-            }
+            int selectedBlockId = selectedBlock.Id;
 
             EnumBrushMode brushMode = BrushMode;
 
-            int blockId = placedBlock.BlockId;
+            int blockId = withItemStack?.Block.Id ?? 0;
 
-            if (!worldEdit.MayPlace(ba.GetBlock(blockId), brushPositions.Length)) return false;
+            if (!workspace.MayPlace(placedBlock, brushPositions.Length)) return;
 
             EnumDepthLimit depthLimit = DepthLimit;
 
@@ -459,7 +458,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         break;
                     case EnumDepthLimit.Top4:
                         skip = isAir(ba, dpos) || (!isAir(ba, dpos, 1) && !isAir(ba, dpos, 2) && !isAir(ba, dpos, 3) && !isAir(ba, dpos, 4));
-                        break;                    
+                        break;
                 }
                 if (skip) continue;
 
@@ -498,8 +497,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
                 }
             }
-
-            return true;
         }
 
         public bool isAir(IBlockAccessor blockAccessor, BlockPos pos, int dy = 0)
@@ -507,14 +504,17 @@ namespace Vintagestory.ServerMods.WorldEdit
             return blockAccessor.GetBlock(pos.X, pos.Y + dy, pos.Z).Id == 0;
         }
 
-        public override EnumHighlightShape GetBlockHighlightShape(WorldEdit we)
+        public override EnumHighlightShape GetBlockHighlightShape()
         {
             if (brushPositions.Length > 300000) return EnumHighlightShape.Cube;
 
-            return base.GetBlockHighlightShape(we);
+            if (BrushShape == EnumBrushShape.Cuboid) return EnumHighlightShape.Cube;
+            if (BrushShape == EnumBrushShape.Cylinder) return EnumHighlightShape.Cylinder;
+
+            return base.GetBlockHighlightShape();
         }
 
-        public override List<BlockPos> GetBlockHighlights(WorldEdit worldEdit)
+        public override List<BlockPos> GetBlockHighlights()
         {
             if (brushPositions.Length > 300000)
             {
@@ -522,7 +522,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             return new List<BlockPos>(brushPositions);
         }
-        
 
         internal void GenBrush()
         {
@@ -582,15 +581,14 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 case EnumBrushShape.Cuboid:
 
-                    int notminx = (dim1Int - cutoutDim1Int) / 2; 
-                    int notmaxx = notminx + cutoutDim1Int;
+                    int notminx = -cutoutDim1Int;
+                    int notmaxx = cutoutDim1Int;
 
-                    int notminy = (dim2Int - cutoutDim2Int) / 2;
-                    int notmaxy = notminy + cutoutDim2Int;
+                    int notminy = -cutoutDim2Int-1;
+                    int notmaxy = cutoutDim2Int;
 
-                    int notminz = (dim3Int - cutoutDim3Int) / 2;
-                    int notmaxz = notminz + cutoutDim3Int;
-
+                    int notminz = -cutoutDim3Int;
+                    int notmaxz = cutoutDim3Int;
 
                     for (int dx = 0; dx < dim1Int; dx++)
                     {
@@ -609,10 +607,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
                     }
 
+
                     break;
 
                 case EnumBrushShape.Cylinder:
-                    
+
                     for (int dx = -xRadInt; dx <= xRadInt; dx++)
                     {
                         for (int dz = -zRadInt; dz <= zRadInt; dz++)
@@ -620,9 +619,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                             if (dx * dx * xRadSqInv + dz * dz * zRadSqInv > 1) continue;
                             if (dx * dx * xCutRadSqInv + dz * dz * zCutRadSqInv < 1) continue;
 
-                            for (int dy = 0; dy < dim2Int; dy++) 
+                            for (int dy = 0; dy < dim2Int; dy++)
                             {
-                                y = dy - dim2Int / 2;
+                                y = (int)Math.Ceiling(dy - dim2Int / 2.0f);
                                 if (Math.Abs(y) < cutoutDim2Int) continue;
                                 positions.Add(new BlockPos(dx, y, dz));
                             }
@@ -677,7 +676,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             this.brushPositions = positions.ToArray();
         }
 
-
         List<BlockPos> HalfBall(int minx, int miny, int minz, int maxx, int maxy, int maxz, int offX, int offY, int offZ, float xRadSqInv, float yRadSqInv, float zRadSqInv, float xCutRadSqInv, float yCutRadSqInv, float zCutRadSqInv)
         {
             List<BlockPos> positions = new List<BlockPos>();
@@ -700,8 +698,5 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             return positions;
         }
-
-        
-
     }
 }

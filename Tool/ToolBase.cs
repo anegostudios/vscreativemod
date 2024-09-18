@@ -2,24 +2,19 @@
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
+using VSCreativeMod;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
-    public interface IWorldEditTool
-    {
-        void Init(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess);
-
-        void OnBuild(WorldEdit worldEdit, BlockPos pos, int oldBlockId, BlockFacing onBlockFace, Vec3f hitPosition);
-        void OnBreak(WorldEdit worldEdit, BlockPos pos, BlockFacing onBlockFace, Vec3f hitPosition, ref EnumHandling handling);
-        bool OnWorldEditCommand(WorldEdit worldEdit, string[] args);
-        Vec3i Size { get; }
-    }
-
     public abstract class ToolBase
     {
         public WorldEditWorkspace workspace;
         public IBlockAccessorRevertable ba;
 
+        public ToolBase()
+        {
+        }
 
         public ToolBase(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess)
         {
@@ -29,6 +24,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public abstract Vec3i Size { get; }
         public virtual bool ShowSelection { get; } = false;
+        public EnumWeToolMode ScrollMode;
+
+        public virtual bool ScrollEnabled => false;
 
         public virtual void OnSelected(WorldEdit worldEdit)
         {
@@ -42,7 +40,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public virtual void OnInteractStart(WorldEdit worldEdit, BlockSelection blockSelection)
         {
-            
+
         }
 
         public virtual void OnAttackStart(WorldEdit worldEdit, BlockSelection blockSelection)
@@ -62,10 +60,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                 targetPos.Z += (workspace.ToolInstance.Size.Z / 2) * blockSel.Face.Normali.Z;
             }
 
-            if (ApplyToolBuild(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack))
+            ApplyToolBuild(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
+        }
+
+        public static void PlaceOldBlock(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, Block placedBlock)
+        {
+            if (oldBlockId >= 0)
             {
-                if (oldBlockId >= 0) ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
-                ba.Commit();
+                if (placedBlock.ForFluidsLayer)
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position, BlockLayersAccess.Fluid);
+                } else
+                {
+                    worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+                }
             }
         }
 
@@ -81,57 +89,59 @@ namespace Vintagestory.ServerMods.WorldEdit
                 targetPos.Z += workspace.ToolInstance.Size.Z / 2 * blockSel.Face.Normali.Z;
             }
 
-            if (ApplyToolBreak(worldEdit, oldblock, blockSel, targetPos, ref handling))
-            {
-                if (handling == EnumHandling.PassThrough)
-                {
-                    ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldblock.Id, ba.GetStagedBlockId(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z));
-                }
-                ba.Commit();
-            }
+            ApplyToolBreak(worldEdit, oldblock, blockSel, targetPos, ref handling);
         }
 
         public virtual void Load(ICoreAPI api)
         {
-            
+
         }
 
         public virtual void Unload(ICoreAPI api)
         {
-            
+
         }
 
-        public virtual bool ApplyToolBuild(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        public virtual void ApplyToolBuild(WorldEdit worldEdit, Block block, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        {
+        }
+
+        public virtual void ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
+        {
+        }
+
+        public virtual bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs args)
         {
             return false;
         }
 
-        public virtual bool ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
+        public virtual List<BlockPos> GetBlockHighlights()
         {
-            return false;
+            return new List<BlockPos>();
         }
 
-        public virtual bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
-        {
-            return false;
+        public virtual List<int> GetBlockHighlightColors() {
+            return new List<int>(new int[] {
+            ColorUtil.ToRgba(100,
+                (int)(GuiStyle.DialogDefaultBgColor[2] * 255),
+                (int)(GuiStyle.DialogDefaultBgColor[1] * 255),
+                (int)(GuiStyle.DialogDefaultBgColor[0] * 255))
+            });
         }
 
-
-
-        public virtual List<BlockPos> GetBlockHighlights(WorldEdit worldEdit) { return new List<BlockPos>(); }
-
-        public virtual List<int> GetBlockHighlightColors(WorldEdit worldEdit) { return new List<int>(new int[] {
-            ColorUtil.ToRgba(48, (int)(GuiStyle.DialogDefaultBgColor[2] * 255), (int)(GuiStyle.DialogDefaultBgColor[1] * 255), (int)(GuiStyle.DialogDefaultBgColor[0] * 255))
-        } ); }
-
-        public virtual EnumHighlightShape GetBlockHighlightShape(WorldEdit we)
+        public virtual EnumHighlightShape GetBlockHighlightShape()
         {
             return EnumHighlightShape.Arbitrary;
         }
 
-        public virtual void HighlightBlocks(IPlayer player, WorldEdit we, EnumHighlightBlocksMode mode)
+        public virtual void HighlightBlocks(IPlayer player, ICoreServerAPI sapi, EnumHighlightBlocksMode mode)
         {
-            we.sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, GetBlockHighlights(we), GetBlockHighlightColors(we), mode, GetBlockHighlightShape(we));
+            sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, GetBlockHighlights(), GetBlockHighlightColors(), mode, GetBlockHighlightShape());
+        }
+
+        public virtual List<SkillItem> GetAvailableModes(ICoreClientAPI capi)
+        {
+            return new List<SkillItem>();
         }
     }
 }

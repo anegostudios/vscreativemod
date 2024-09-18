@@ -32,18 +32,18 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public static void RegisterDefaultTools()
         {
-            RegisterToolType("Move", typeof(MoveTool));
-            RegisterToolType("Repeat", typeof(RepeatTool));
-            RegisterToolType("Select", typeof(SelectTool));
-            RegisterToolType("Paint brush", typeof(PaintBrushTool));
-            RegisterToolType("Air brush", typeof(AirBrushTool));
-            RegisterToolType("Line", typeof(LineTool));
-            RegisterToolType("Eraser", typeof(EraserTool));
-            RegisterToolType("Flood Fill", typeof(FloodFillTool));
-            RegisterToolType("Raise/lower", typeof(RaiseLowerTool));
-            RegisterToolType("Grow/shrink", typeof(GrowShrinkTool)); 
-            RegisterToolType("Erode", typeof(ErodeTool));
-            RegisterToolType("Import", typeof(ImportTool));
+            RegisterToolType("move", typeof(MoveTool));
+            RegisterToolType("repeat", typeof(RepeatTool));
+            RegisterToolType("select", typeof(SelectTool));
+            RegisterToolType("paintbrush", typeof(PaintBrushTool));
+            RegisterToolType("airbrush", typeof(AirBrushTool));
+            RegisterToolType("line", typeof(LineTool));
+            RegisterToolType("eraser", typeof(EraserTool));
+            RegisterToolType("floodfill", typeof(FloodFillTool));
+            RegisterToolType("raiselower", typeof(RaiseLowerTool));
+            RegisterToolType("growshrink", typeof(GrowShrinkTool)); 
+            RegisterToolType("erode", typeof(ErodeTool));
+            RegisterToolType("import", typeof(ImportTool));
         }
     }
 }

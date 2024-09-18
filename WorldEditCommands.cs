@@ -13,6 +13,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 {
     public partial class WorldEdit : ModSystem
     {
+        /// <summary>
+        /// Only use this with commands when loadWorkSpace() was run prior, do not rely on the set workspace otherwise since we will run into issues with multiple ppl using WE
+        /// </summary>
+        private WorldEditWorkspace workspace;
         private void RegisterCommands()
         {
             var parsers = sapi.ChatCommands.Parsers;
@@ -37,7 +41,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("constrain")
                     .WithDesc("Constrain all world edit operations")
-                    .WithAlias("cs")
+                    .WithAlias("ct")
                     .WithArgs(parsers.WordRange("constraint type", "none", "selection"))
                     .HandleWith(handleConstrain)
                 .EndSub()
@@ -123,6 +127,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("pr")
                     .WithDesc("Set player picking range (default survival mode value is 4.5)")
+                    .RequiresPlayer()
                     .WithAlias("player-reach").WithAlias("range")
                     .WithArgs(parsers.DoubleRange("range", 0, 9999))
                     .HandleWith(handleRange)
@@ -161,7 +166,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleToggleImpres)
                 .EndSub()
-                
                 .BeginSub("start")
                     .WithDesc("Mark start position for selection")
                     .WithAlias("s").WithAlias("1")
@@ -186,7 +190,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSubs("gn", "ge", "gs", "gw", "gu", "gd", "gl")
                     .WithDesc("Grow selection in given direction (gl for look direction)")
-                    .WithArgs(parsers.OptionalInt("amount", 1))
+                    .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
                     .HandleWith(handleGrowSelection)
                 .EndSub()
                 .BeginSub("rotate")
@@ -206,13 +210,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }))
                     .HandleWith(handleFlipSelection)
                 .EndSub()
-                
+
                 .BeginSub("repeat")
                     .WithAlias("rep")
                     .WithDesc("Repeat selected area in given direction")
                     .WithArgs(
-                        parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), 
-                        parsers.OptionalInt("amount", 1), 
+                        parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }),
+                        parsers.OptionalInt("amount", 1),
                         parsers.OptionalWordRange("selection behavior (sn=select new area, gn=grow to include new area)", "sn", "gn")
                     )
                     .HandleWith(handleRepeatSelection)
@@ -220,7 +224,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .BeginSub("move")
                     .WithAlias("m")
                     .WithDesc("Move selected area in given direction")
-                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
                     .HandleWith(handleMoveSelection)
                 .EndSub()
                 .BeginSub("mmby")
@@ -230,7 +234,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("shift")
                     .WithDesc("Shift current selection by given amount (does not move blocks, only the selection)")
-                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
                     .HandleWith(handleShiftSelection)
                 .EndSub()
                 .BeginSub("smby")
@@ -291,6 +295,36 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.PlayerUids("player"))
                     .HandleWith(WipeWorkspace)
                 .EndSub()
+                .BeginSub("tool-rsp")
+                    .WithDesc("Enable disable the right setting panel")
+                    .WithAlias("rsp")
+                    .WithArgs(parsers.Bool("Mode"))
+                    .HandleWith(handleRsp)
+                .EndSub()
+                .BeginSub("tool-axislock")
+                    .WithDesc("Switch the axis lock for scroll wheel move and selection actions")
+                    .WithAlias("tal")
+                    .WithArgs(parsers.Int("Mode"))
+                    .HandleWith(handleTal)
+                .EndSub()
+                .BeginSub("tool-stepsize")
+                    .WithDesc("Set the stepsize for the scroll wheel actions")
+                    .WithAlias("step")
+                    .WithArgs(parsers.Int("amount"))
+                    .HandleWith(handleStep)
+                .EndSub()
+                .BeginSub("tool-rsp")
+                    .WithDesc("Enable disable the right setting panel")
+                    .WithAlias("rsp")
+                    .WithArgs(parsers.Bool("Mode"))
+                    .HandleWith(handleRsp)
+                .EndSub()
+                .BeginSub("tool-axislock")
+                    .WithDesc("Switch the axis lock for scroll wheel move and selection actions")
+                    .WithAlias("tal")
+                    .WithArgs(parsers.Int("Mode"))
+                    .HandleWith(handleTal)
+                .EndSub()
                 .Validate()
             ;
 
@@ -329,7 +363,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         .WithArgs(parsers.OptionalInt("amount", 1))
                         .HandleWith(handleMoveSelectionShorthand)
                     .EndSub()
-                    
+
                     .BeginSubs("smn", "sme", "sms", "sms", "smw", "smu", "smd")
                         .WithDesc("Shift current selection in given direction")
                         .WithArgs(parsers.OptionalInt("amount", 1))
@@ -343,7 +377,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             var players = (PlayerUidName[])args.Parsers[0].GetValue();
             var results = new LimitedList<string>(10);
-            
+
             if (players.Length == 0)
             {
                 return TextCommandResult.Error(Lang.Get("No players found that match your selector"));
@@ -354,14 +388,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (workspaces.ContainsKey(parsedplayer.Uid))
                 {
                     workspaces.Remove(parsedplayer.Uid);
-                    
+
                     var revertibleBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
                     var newWorkspace = new WorldEditWorkspace(sapi.World, revertibleBlockAccess);
+                    newWorkspace.Init(sapi);
                     revertibleBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, newWorkspace);
-                    
+
                     workspaces[parsedplayer.Uid] = newWorkspace;
                     newWorkspace.PlayerUID = parsedplayer.Uid;
-                    
+
                     results.Add($"Workspace for {parsedplayer.Name} deleted");
                     SendPlayerWorkSpace(parsedplayer.Uid);
                 }
@@ -369,7 +404,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     results.Add($"No Workspace for {parsedplayer.Name} exists");
                 }
-                
+
             }
 
             if (players.Length <= 10)
@@ -389,13 +424,13 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult handleMirrorShorthand(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return HandleMirrorCommand(BlockFacing.FromFirstLetter(dirchar), (string)args[0]);
+            return workspace.HandleMirrorCommand(BlockFacing.FromFirstLetter(dirchar), (string)args[0]);
         }
 
         private TextCommandResult handleMirrorSelection(TextCommandCallingArgs args)
         {
             var facing = blockFacingFromArg((string)args[0], args);
-            return HandleMirrorCommand(facing, "sn");
+            return workspace.HandleMirrorCommand(facing, "sn");
         }
 
         private TextCommandResult onReplaceMaterial(TextCommandCallingArgs args)
@@ -514,7 +549,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     corrected++;
                 }
             });
-            
+
             return TextCommandResult.Success(corrected + " block entities corrected. See log files for more detail.");
         }
 
@@ -547,7 +582,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult onToolCommand(TextCommandCallingArgs args)
         {
-            if (args.RawArgs.Length > 0 && (workspace.ToolInstance == null || !workspace.ToolInstance.OnWorldEditCommand(this, args.RawArgs)))
+            if (args.RawArgs.Length > 0 && (workspace.ToolInstance == null || !workspace.ToolInstance.OnWorldEditCommand(this, args)))
             {
                 return TextCommandResult.Error("No such function " + args.RawArgs.PopWord() + ". Maybe wrong tool selected?");
             }
@@ -558,9 +593,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult loadWorkSpace(TextCommandCallingArgs args)
         {
-            if (!CanUseWorldEdit(args.Caller.Player, true)) return TextCommandResult.Error("Caller is not allowed to use world edit");
-            this.workspace = GetOrCreateWorkSpace(args.Caller.Player);
-            this.fromPlayer = args.Caller.Player as IServerPlayer;
+            var serverPlayer = args.Caller.Player as IServerPlayer;
+            if (!CanUseWorldEdit(serverPlayer, true)) return TextCommandResult.Error("Caller is not allowed to use world edit");
+            workspace = GetOrCreateWorkSpace(args.Caller.Player);
             return TextCommandResult.Success();
         }
 
@@ -572,7 +607,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             var centerPos = args.Caller.Pos.AsBlockPos;
             var start = centerPos.AddCopy(-widthlength, 0, -widthlength);
             var end = centerPos.AddCopy(widthlength, height, widthlength);
-            var cleared = FillArea(null, start, end);
+            var cleared = workspace.FillArea(null, start, end);
 
             var entitiesRemoved = RemoveEntitiesInArea(start, end);
             return TextCommandResult.Success(cleared + " Blocks and " + entitiesRemoved +" Entities removed");
@@ -585,7 +620,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Start marker or end marker not set");
             }
 
-            var cleared = FillArea(null, workspace.StartMarker, workspace.EndMarker);
+            var cleared = workspace.FillArea(null, workspace.StartMarker, workspace.EndMarker);
             var entitiesRemoved = RemoveEntitiesInArea( workspace.StartMarker, workspace.EndMarker);
             return TextCommandResult.Success(cleared + " Blocks and " + entitiesRemoved +" Entities removed");
         }
@@ -616,7 +651,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Please put the desired block in your active hotbar slot ");
             }
 
-            int filled = FillArea(stack, workspace.StartMarker, workspace.EndMarker);
+            int filled = workspace.FillArea(stack, workspace.StartMarker, workspace.EndMarker);
 
             var entitiesInArea = RemoveEntitiesInArea(workspace.StartMarker, workspace.EndMarker);
             return TextCommandResult.Success(filled + " marked blocks placed and " + entitiesInArea + "removed");
@@ -637,13 +672,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.EndMarker = null;
             workspace.StartMarkerExact = null;
             workspace.EndMarkerExact = null;
-            workspace.ResendBlockHighlights(this);
+            workspace.ResendBlockHighlights();
             return TextCommandResult.Success("Marked positions cleared");
         }
 
         private TextCommandResult handleShiftSelectionBy(TextCommandCallingArgs args)
         {
-            return HandleShiftCommand((Vec3i)args[0]);
+            return workspace.HandleShiftCommand((Vec3i)args[0]);
         }
         private TextCommandResult handleShiftSelection(TextCommandCallingArgs args)
         {
@@ -654,19 +689,21 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
             }
-            return HandleShiftCommand(facing.Normali.Clone() * amount);
+
+            var quiet = !args.Parsers[2].IsMissing && (bool)args[2];
+            return workspace.HandleShiftCommand(facing.Normali.Clone() * amount, quiet);
         }
 
         private TextCommandResult handleShiftSelectionShorthand(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
             var amount = args.Parsers[0].IsMissing ? 1 : (int)args[0];
-            return HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali.Clone() * amount);
+            return workspace.HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali.Clone() * amount);
         }
 
         private TextCommandResult handleMoveSelectionBy(TextCommandCallingArgs args)
         {
-            return HandleMoveCommand((Vec3i)args[0]);
+            return workspace.HandleMoveCommand((Vec3i)args[0]);
         }
 
         private TextCommandResult handleMoveSelection(TextCommandCallingArgs args)
@@ -678,13 +715,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
             }
-            return HandleMoveCommand(facing.Normali.Clone() * amount);
+
+            var quiet = !args.Parsers[2].IsMissing && (bool)args[2];
+            return workspace.HandleMoveCommand(facing.Normali.Clone() * amount, quiet);
         }
 
         private TextCommandResult handleMoveSelectionShorthand(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return HandleMoveCommand(BlockFacing.FromFirstLetter(dirchar).Normali);
+            return workspace.HandleMoveCommand(BlockFacing.FromFirstLetter(dirchar).Normali);
         }
 
         private TextCommandResult handleRepeatSelection(TextCommandCallingArgs args)
@@ -696,19 +735,19 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
             }
 
-            return HandleRepeatCommand(facing.Normali, (int)args[1], (string)args[2]);
+            return workspace.HandleRepeatCommand(facing.Normali, (int)args[1], (string)args[2]);
         }
 
         private TextCommandResult handleRepeatShorthand(TextCommandCallingArgs args)
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            return HandleRepeatCommand(BlockFacing.FromFirstLetter(dirchar).Normali, (int)args[0], (string)args[1]);
+            return workspace.HandleRepeatCommand(BlockFacing.FromFirstLetter(dirchar).Normali, (int)args[0], (string)args[1]);
         }
 
 
         private TextCommandResult handleRotateSelection(TextCommandCallingArgs args)
         {
-            return HandleRotateCommand(((string)args[0]).ToInt());
+            return workspace.HandleRotateCommand(((string)args[0]).ToInt());
         }
 
         private TextCommandResult handleFlipSelection(TextCommandCallingArgs args)
@@ -720,7 +759,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Invalid direction, must be a cardinal, x/y/z or l/look");
             }
 
-            return HandleFlipCommand(facing.Axis);
+            return workspace.HandleFlipCommand(facing.Axis);
         }
 
         private TextCommandResult handleResize(TextCommandCallingArgs args)
@@ -733,14 +772,14 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
             var amount = (int)args[1];
-            return ModifyMarker(facing, amount);
+            return workspace.ModifyMarker(facing, amount);
         }
 
         private BlockFacing blockFacingFromArg(string direction, TextCommandCallingArgs args)
         {
             BlockFacing facing = BlockFacing.FromFirstLetter(direction[0]);
             if (facing != null) return facing;
-            
+
             // North: Negative Z
             // East: Positive X
             // South: Positive Z
@@ -749,10 +788,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             // Down: Negative Y
             switch (direction)
             {
+                case "e":
                 case "+x":
                 case "x":
                     facing = BlockFacing.EAST;
                     break;
+                case "w":
                 case "-x":
                     facing = BlockFacing.WEST;
                     break;
@@ -763,10 +804,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "-y":
                     facing = BlockFacing.DOWN;
                     break;
+                case "s":
                 case "+z":
                 case "z":
                     facing = BlockFacing.SOUTH;
                     break;
+                case "n":
                 case "-z":
                     facing = BlockFacing.NORTH;
                     break;
@@ -775,7 +818,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     var lookVec = args.Caller.Entity.SidedPos.GetViewVector();
                     facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     break;
-
                 default:
                     return null;
             }
@@ -787,39 +829,56 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
             var facing = blockFacingFromArg(""+dirchar, args);
+            var quiet = !args.Parsers[1].IsMissing && (bool)args[1];
 
-            return ModifyMarker(facing, (int)args[0]);
+            return workspace.ModifyMarker(facing, (int)args[0], quiet);
         }
 
         private TextCommandResult handleMark(TextCommandCallingArgs args)
         {
-            workspace.StartMarker = (args[0] as Vec3d).AsBlockPos;
-            workspace.EndMarker = (args[1] as Vec3d).AsBlockPos;
-            EnsureInsideMap(workspace.EndMarker);
-            workspace.HighlightSelectedArea();
+            var start = (args[0] as Vec3d);
+            var end = (args[1] as Vec3d);
+            if (start.X - (int)start.X < 0.1) // is absolute pos
+            {
+                start.Add(0.5, 0.5, 0.5);
+            }
+            else
+            {
+                start.Add(0, 0.5, 0);
+            }
+
+            if (end.X - (int)end.X < 0.1) // is absolute pos
+            {
+                end.Add(0.5, 0.5, 0.5);
+            }
+            else{end.Add(0,0.5,0);}
+
+            workspace.StartMarkerExact = start;
+            workspace.EndMarkerExact = end;
+            workspace.UpdateSelection();
             return TextCommandResult.Success("Start and end position marked");
         }
 
         private TextCommandResult handleMarkEnd(TextCommandCallingArgs args)
         {
-            return SetEndPos(args.Caller.Pos);
+            return workspace.SetEndPos(args.Caller.Pos);
         }
 
         private TextCommandResult handleMarkStart(TextCommandCallingArgs args)
         {
-            return SetStartPos(args.Caller.Pos);
+            return workspace.SetStartPos(args.Caller.Pos);
         }
 
         private TextCommandResult handleToggleImpres(TextCommandCallingArgs args)
         {
             if (args.Parsers[0].IsMissing)
             {
-                return TextCommandResult.Success("Import item/block resolving currently " + (ReplaceMetaBlocks ? "on" : "off"));
+                return TextCommandResult.Success("Meta block replacing for worldedit currently " + (ReplaceMetaBlocks ? "on" : "off"));
             }
 
             var doReplace = (bool)args[0];
             ReplaceMetaBlocks = doReplace;
-            return TextCommandResult.Success("Import item/block resolving now globally " + (doReplace ? "on" : "off"));
+            return TextCommandResult.Success("Meta block replacing for worldedit now " + (doReplace ? "on" : "off"));
         }
 
         private TextCommandResult handleImport(TextCommandCallingArgs args)
@@ -842,7 +901,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 catch { }
             }
 
-            return ImportArea(filename, workspace.StartMarker, origin);
+            return workspace.ImportArea(filename, workspace.StartMarker, origin);
         }
 
         private TextCommandResult handleMgenCode(TextCommandCallingArgs args)
@@ -898,19 +957,19 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if ((args[1] as string)?.ToLowerInvariant() == "c")
             {
-                BlockPos st = workspace.StartMarker;
-                BlockPos en = workspace.EndMarker;
+                BlockPos st = workspace.StartMarkerExact.AsBlockPos;
+                BlockPos en = workspace.EndMarkerExact.AsBlockPos;
                 serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we {7} {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0], sendToClient ? "expc" : "exp")  }, player);
             }
 
-            return ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, sendToClient ? player : null);
+            return workspace.ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, sendToClient ? player : null);
         }
 
         private TextCommandResult handleRange(TextCommandCallingArgs args)
         {
             float pickingrange = (float)((double)args[0]);
-            fromPlayer.WorldData.PickingRange = pickingrange;
-            fromPlayer.BroadcastPlayerData();
+            args.Caller.Player.WorldData.PickingRange = pickingrange;
+            ((IServerPlayer)args.Caller.Player).BroadcastPlayerData();
             return TextCommandResult.Success("Picking range " + pickingrange + " set");
         }
 
@@ -926,8 +985,51 @@ namespace Vintagestory.ServerMods.WorldEdit
             catch (Exception) { }
 
             workspace.ToolOffsetMode = mode;
-            workspace.ResendBlockHighlights(this);
+            workspace.ResendBlockHighlights();
             return TextCommandResult.Success("Set tool offset mode " + mode);
+        }
+
+        private TextCommandResult handleTal(TextCommandCallingArgs args)
+        {
+            EnumFreeMovAxisLock mode = EnumFreeMovAxisLock.None;
+
+            try
+            {
+                int index = (int)args[0];
+                mode = (EnumFreeMovAxisLock)index;
+            }
+            catch (Exception) { }
+
+            workspace.ToolAxisLock = (int)mode;
+            return TextCommandResult.Success("Set tool axis lock " + mode);
+        }
+
+        private TextCommandResult handleStep(TextCommandCallingArgs args)
+        {
+            var amount = 0;
+
+            try
+            {
+                amount = (int)args[0];
+            }
+            catch (Exception) { }
+
+            workspace.StepSize = amount;
+            return TextCommandResult.Success("Set tool step size to " + amount);
+        }
+
+        private TextCommandResult handleRsp(TextCommandCallingArgs args)
+        {
+            var enabled = true;
+
+            try
+            {
+                enabled = (bool)args[0];
+            }
+            catch (Exception) { }
+
+            workspace.Rsp = enabled;
+            return TextCommandResult.Success("Set Right settings panel " + (enabled ? "on" : "off"));
         }
 
         private TextCommandResult handleSetTool(TextCommandCallingArgs args)
@@ -944,7 +1046,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         workspace.ToolsEnabled = false;
                         workspace.SetTool(null, sapi);
-                        workspace.ResendBlockHighlights(this);
+                        workspace.ResendBlockHighlights();
+                        SendPlayerWorkSpace(workspace.PlayerUID);
                         return TextCommandResult.Success("World edit tools now disabled");
                     }
 
@@ -971,8 +1074,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             workspace.SetTool(toolname, sapi);
             workspace.ToolsEnabled = true;
-            workspace.ResendBlockHighlights(this);
-            SendPlayerWorkSpace(fromPlayer.PlayerUID);
+            workspace.ResendBlockHighlights();
+            SendPlayerWorkSpace(workspace.PlayerUID);
             return TextCommandResult.Success(toolname + " tool selected");
         }
 
@@ -989,10 +1092,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult handleToolModeOff(TextCommandCallingArgs args)
         {
-            DestroyPreview();
+            workspace.DestroyPreview();
             workspace.ToolsEnabled = false;
             workspace.SetTool(null, sapi);
-            workspace.ResendBlockHighlights(this);
+            workspace.ResendBlockHighlights();
             return TextCommandResult.Success("World edit tools now disabled");
         }
 
@@ -1000,7 +1103,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             workspace.ToolsEnabled = true;
             if (workspace.ToolName != null) workspace.SetTool(workspace.ToolName, sapi);
-            workspace.ResendBlockHighlights(this);
+            workspace.ResendBlockHighlights();
             return TextCommandResult.Success("World edit tools now enabled");
         }
 
@@ -1079,7 +1182,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("No copied block data to paste");
             }
 
-            PasteBlockData(workspace.clipboardBlockData, workspace.StartMarker, EnumOrigin.StartPos);
+            workspace.PasteBlockData(workspace.clipboardBlockData, workspace.StartMarker, EnumOrigin.StartPos);
             return TextCommandResult.Success(workspace.clipboardBlockData.BlockIds.Count + " blocks pasted");
         }
 
@@ -1090,11 +1193,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Please mark start and end position");
             }
 
-            workspace.clipboardBlockData = CopyArea(workspace.StartMarker, workspace.EndMarker, true);
-            FillArea(null, workspace.StartMarker, workspace.EndMarker, true);
+            workspace.clipboardBlockData = workspace.CopyArea(workspace.StartMarker, workspace.EndMarker, true);
+            workspace.FillArea(null, workspace.StartMarker, workspace.EndMarker, true);
             BlockPos startPos = workspace.StartMarker.Copy();
             startPos.Add(workspace.clipboardBlockData.PackedOffset);
-            IMiniDimension miniDimension = CreateDimensionFromSchematic(workspace.clipboardBlockData, startPos, EnumOrigin.StartPos);
+            IMiniDimension miniDimension = workspace.CreateDimensionFromSchematic(workspace.clipboardBlockData, startPos, EnumOrigin.StartPos);
             if (miniDimension == null) return TextCommandResult.Error("No more Mini Dimensions available");
             Entity launched = GameContent.EntityTestShip.CreateShip(sapi, miniDimension);
             launched.Pos.SetFrom(launched.ServerPos);
@@ -1110,8 +1213,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Please mark start and end position");
             }
 
-            BlockPos s = workspace.StartMarker;
-            BlockPos e = workspace.EndMarker;
+            BlockPos s = workspace.StartMarkerExact.AsBlockPos;
+            BlockPos e = workspace.EndMarkerExact.AsBlockPos;
 
             serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}", s.X, s.Y, s.Z, e.X, e.Y, e.Z) }, args.Caller.Player as IServerPlayer);
             return TextCommandResult.Success("Ok, sent to client clipboard");
@@ -1124,7 +1227,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error("Please mark start and end position");
             }
 
-            workspace.clipboardBlockData = CopyArea(workspace.StartMarker, workspace.EndMarker);
+            workspace.clipboardBlockData = workspace.CopyArea(workspace.StartMarker, workspace.EndMarker);
+            if (workspace.ToolInstance is ImportTool it)
+            {
+                var modSystem = sapi.ModLoader.GetModSystem<WorldEdit>();
+                it.SetBlockDatas(modSystem , workspace.clipboardBlockData);
+            }
             return TextCommandResult.Success(Lang.Get("{0} blocks and {1} entities copied", workspace.clipboardBlockData.BlockIds.Count, workspace.clipboardBlockData.EntitiesUnpacked.Count));
         }
 
@@ -1138,6 +1246,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             workspace.ImportAngle = ((string)args[0]).ToInt(0);
             return TextCommandResult.Success(Lang.Get("Ok, set rotation to {0} degrees", workspace.ImportAngle));
-        }       
+        }
     }
 }

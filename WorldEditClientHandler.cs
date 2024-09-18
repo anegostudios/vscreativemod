@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json;
 using ProtoBuf;
 using Vintagestory.API.Client;
@@ -8,10 +9,10 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
+using VSCreativeMod;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
-
     public class GuiDialogConfirmAcceptFile : GuiDialog
     {
         string text;
@@ -25,7 +26,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return null; }
         }
 
-
         public GuiDialogConfirmAcceptFile(ICoreClientAPI capi, string text, Action<string> DidPressButton) : base(capi)
         {
             this.text = text;
@@ -36,7 +36,8 @@ namespace Vintagestory.ServerMods.WorldEdit
         private void Compose()
         {
             ElementBounds textBounds = ElementStdBounds.Rowed(0.4f, 0, EnumDialogArea.LeftFixed).WithFixedWidth(500);
-            ElementBounds bgBounds = ElementStdBounds.DialogBackground().WithFixedPadding(GuiStyle.ElementToDialogPadding, GuiStyle.ElementToDialogPadding);
+            ElementBounds bgBounds = ElementStdBounds.DialogBackground()
+                .WithFixedPadding(GuiStyle.ElementToDialogPadding, GuiStyle.ElementToDialogPadding);
             TextDrawUtil util = new TextDrawUtil();
             CairoFont font = CairoFont.WhiteSmallText();
 
@@ -44,18 +45,36 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             SingleComposer =
                 capi.Gui
-                .CreateCompo("confirmdialog-" + (index++), ElementStdBounds.AutosizedMainDialog)
-                .AddShadedDialogBG(bgBounds, true)
-                .AddDialogTitleBar(Lang.Get("Please Confirm"), OnTitleBarClose)
-                .BeginChildElements(bgBounds)
+                    .CreateCompo("confirmdialog-" + (index++), ElementStdBounds.AutosizedMainDialog)
+                    .AddShadedDialogBG(bgBounds, true)
+                    .AddDialogTitleBar(Lang.Get("Please Confirm"), OnTitleBarClose)
+                    .BeginChildElements(bgBounds)
                     .AddStaticText(text, font, textBounds)
-
-                    .AddSmallButton(Lang.Get("Ignore all files"), () => { DidPressButton("ignore"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(6), EnumButtonStyle.Normal)
-                    .AddSmallButton(Lang.Get("Accept file"), () => { DidPressButton("accept"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6), EnumButtonStyle.Normal)
-                    .AddSmallButton(Lang.Get("Accept next 10 files"), () => { DidPressButton("accept10"); TryClose(); return true; }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6).WithFixedAlignmentOffset(-100, 0), EnumButtonStyle.Normal)
-                .EndChildElements()
-                .Compose()
-            ;
+                    .AddSmallButton(Lang.Get("Ignore all files"), () =>
+                        {
+                            DidPressButton("ignore");
+                            TryClose();
+                            return true;
+                        }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(6),
+                        EnumButtonStyle.Normal)
+                    .AddSmallButton(Lang.Get("Accept file"), () =>
+                        {
+                            DidPressButton("accept");
+                            TryClose();
+                            return true;
+                        }, ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6),
+                        EnumButtonStyle.Normal)
+                    .AddSmallButton(Lang.Get("Accept next 10 files"), () =>
+                        {
+                            DidPressButton("accept10");
+                            TryClose();
+                            return true;
+                        },
+                        ElementStdBounds.MenuButton((y + 80) / 80f).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(6)
+                            .WithFixedAlignmentOffset(-100, 0), EnumButtonStyle.Normal)
+                    .EndChildElements()
+                    .Compose()
+                ;
         }
 
         private void OnTitleBarClose()
@@ -68,10 +87,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             Compose();
             base.OnGuiOpened();
         }
-
     }
-
-
 
     public class WorldEditClientHandler
     {
@@ -81,6 +97,8 @@ namespace Vintagestory.ServerMods.WorldEdit
         public GuiJsonDialog controlsDialog;
         public GuiJsonDialog toolOptionsDialog;
         public GuiJsonDialog settingsDialog;
+        public HudWorldEditInputCapture scroll;
+        public WorldEditScrollToolMode toolModeSelect;
 
         JsonDialogSettings toolBarsettings;
         JsonDialogSettings toolOptionsSettings;
@@ -90,52 +108,52 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         bool isComposing;
         bool beforeAmbientOverride;
-        private bool _showRightSettings = true;
-        
+
         public WorldEditClientHandler(ICoreClientAPI capi)
         {
             this.capi = capi;
-            this.capi.ChatCommands.GetOrCreate("we")
-                .WithDescription("World edit toolbar")
-                .HandleWith(CmdEditClient)
-                .BeginSubCommands("rightsettingspanel", "rsp")
-                    .WithDescription("Toggle the visibility of the Right settings panel")
-                    .WithArgs(capi.ChatCommands.Parsers.OptionalBool("setting"))
-                    .HandleWith(HandleToggleRightSettings)
-                .EndSubCommand()
-                ;
             capi.Input.RegisterHotKey("worldedit", Lang.Get("World Edit"), GlKeys.Tilde, HotkeyType.CreativeTool);
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
+
+            capi.Input.RegisterHotKey("worldeditcopy", Lang.Get("World Edit Copy"), GlKeys.C, HotkeyType.CreativeTool,
+                false, true);
+            capi.Input.RegisterHotKey("worldeditundo", Lang.Get("World Edit Undo"), GlKeys.Z, HotkeyType.CreativeTool,
+                false, true);
+
             capi.Event.LeaveWorld += Event_LeaveWorld;
             capi.Event.FileDrop += Event_FileDrop;
             capi.Event.LevelFinalize += Event_LevelFinalize;
             capi.Input.InWorldAction += Input_InWorldAction;
 
+            _receivedSchematics = new Queue<SchematicJsonPacket>();
             clientChannel =
                 capi.Network.GetChannel("worldedit")
-                .SetMessageHandler<WorldEditWorkspace>(OnServerWorkspace)
-                .SetMessageHandler<CopyToClipboardPacket>(OnClipboardCopy)
-                .SetMessageHandler<SchematicJsonPacket>(OnReceivedSchematic)
-                .SetMessageHandler<PreviewBlocksPacket>(OnReceivedPreviewBlocks)
-            ;
+                    .SetMessageHandler<WorldEditWorkspace>(OnServerWorkspace)
+                    .SetMessageHandler<CopyToClipboardPacket>(OnClipboardCopy)
+                    .SetMessageHandler<SchematicJsonPacket>(OnReceivedSchematic)
+                    .SetMessageHandler<PreviewBlocksPacket>(OnReceivedPreviewBlocks)
+                ;
 
             if (!capi.Settings.Int.Exists("schematicMaxUploadSizeKb"))
             {
                 capi.Settings.Int["schematicMaxUploadSizeKb"] = 200;
             }
+
+            _toolInstances ??= new Dictionary<string, ToolBase>();
         }
 
         private void Event_LevelFinalize()
         {
-            capi.Gui.Icons.CustomIcons["worldedit/chiselbrush"] = capi.Gui.Icons.SvgIconSource(new AssetLocation("textures/icons/worldedit/chiselbrush.svg"));
+            capi.Gui.Icons.CustomIcons["worldedit/chiselbrush"] =
+                capi.Gui.Icons.SvgIconSource(new AssetLocation("textures/icons/worldedit/chiselbrush.svg"));
         }
 
         private void Input_InWorldAction(EnumEntityAction action, bool on, ref EnumHandling handled)
         {
-            if (on && ownWorkspace?.ToolsEnabled == true && ownWorkspace.ToolName == "chiselbrush" && (action == EnumEntityAction.InWorldLeftMouseDown || action == EnumEntityAction.InWorldRightMouseDown))
+            var blockSel = capi.World.Player.CurrentBlockSelection;
+            if (on && ownWorkspace?.ToolsEnabled == true && ownWorkspace.ToolName == "chiselbrush" &&
+                (action == EnumEntityAction.InWorldLeftMouseDown || action == EnumEntityAction.InWorldRightMouseDown) && blockSel != null)
             {
-                var blockSel = capi.World.Player.CurrentBlockSelection;
-
                 handled = EnumHandling.PreventDefault;
                 clientChannel.SendPacket(new WorldInteractPacket()
                 {
@@ -149,8 +167,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        Queue<SchematicJsonPacket> receivedSchematics = new Queue<SchematicJsonPacket>();
-        GuiDialogConfirmAcceptFile acceptDlg;
+        private readonly Queue<SchematicJsonPacket> _receivedSchematics;
+        private GuiDialogConfirmAcceptFile _acceptDlg;
+        private Dictionary<string, ToolBase> _toolInstances;
+
         private void OnReceivedSchematic(SchematicJsonPacket message)
         {
             int allowCount = capi.Settings.Int["allowSaveFilesFromServer"];
@@ -161,22 +181,26 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return;
             }
 
-            receivedSchematics.Enqueue(message);
+            _receivedSchematics.Enqueue(message);
 
             if (allowCount == 0)
             {
-                if ((acceptDlg == null || !acceptDlg.IsOpened()))
+                if ((_acceptDlg == null || !_acceptDlg.IsOpened()))
                 {
-                    capi.ShowChatMessage(Lang.Get("schematic-confirm")); //To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!
-                    acceptDlg = new GuiDialogConfirmAcceptFile(capi, Lang.Get("The server wants to send you a schematic file. Please confirm to accept the file.") + "\n\n" + Lang.Get("{0}.json ({1} Kb)", message.Filename, message.JsonCode.Length / 1024), (code) => onConfirm(code));
-                    acceptDlg.TryOpen();
+                    capi.ShowChatMessage(
+                        Lang.Get("schematic-confirm")); //To accept, set allowSaveFilesFromServer to true in clientsettings.json, or type '.clientconfigcreate allowSavefilesFromServer bool true' but be aware of potential security implications!
+                    _acceptDlg = new GuiDialogConfirmAcceptFile(capi,
+                        Lang.Get("The server wants to send you a schematic file. Please confirm to accept the file.") + "\n\n" +
+                        Lang.Get("{0}.json ({1} Kb)", message.Filename, message.JsonCode.Length / 1024), (code) => onConfirm(code));
+                    _acceptDlg.TryOpen();
                 }
+
                 return;
             }
 
-            capi.ShowChatMessage(Lang.Get("schematic-ignored") + " <a href=\"chattype://.clientconfig allowSaveFilesFromServer 1\">allowSaveFilesFromServer 1</a>");
+            capi.ShowChatMessage(Lang.Get("schematic-ignored") +
+                                 " <a href=\"chattype://.clientconfig allowSaveFilesFromServer 1\">allowSaveFilesFromServer 1</a>");
         }
-
 
         private void onConfirm(string code)
         {
@@ -195,8 +219,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         capi.Settings.Int["allowSaveFilesFromServer"] = 1;
                     }
 
-                    var sdf = new Queue<SchematicJsonPacket>(receivedSchematics);
-                    receivedSchematics.Clear();
+                    var sdf = new Queue<SchematicJsonPacket>(_receivedSchematics);
+                    _receivedSchematics.Clear();
                     while (sdf.Count > 0)
                     {
                         if (capi.Settings.Int["allowSaveFilesFromServer"] > 0)
@@ -212,8 +236,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             }, "acceptfiles");
         }
 
-        private void receiveFile(SchematicJsonPacket message) 
-        { 
+        private void receiveFile(SchematicJsonPacket message)
+        {
             try
             {
                 string exportFolderPath = capi.GetOrCreateDataPath("WorldEdit");
@@ -238,7 +262,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
                 capi.Settings.Int["allowSaveFilesFromServer"]--;
-                capi.ShowChatMessage(Lang.Get("schematic-received", "<a href=\"datafolder://worldedit\">" + message.Filename + ".json</a>", capi.Settings.Int["allowSaveFilesFromServer"]));
+                capi.ShowChatMessage(Lang.Get("schematic-received", "<a href=\"datafolder://worldedit\">" + message.Filename + ".json</a>",
+                    capi.Settings.Int["allowSaveFilesFromServer"]));
             }
             catch (IOException e)
             {
@@ -255,22 +280,22 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 info = new FileInfo(ev.Filename);
                 bytes = info.Length;
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 capi.TriggerIngameError(this, "importfailed", $"Unable to import schematic: {ex.Message}");
                 capi.Logger.Error(ex);
                 return;
             }
 
-            if (ownWorkspace != null && ownWorkspace.ToolsEnabled && ownWorkspace.ToolName == "Import")
+            if (ownWorkspace != null && ownWorkspace.ToolsEnabled && ownWorkspace.ToolName == "import")
             {
-
                 int schematicMaxUploadSizeKb = capi.Settings.Int.Get("schematicMaxUploadSizeKb", 200);
-            
+
                 // Limit the file size
                 if (bytes / 1024 > schematicMaxUploadSizeKb)
                 {
-                    capi.TriggerIngameError(this, "schematictoolarge", Lang.Get("Importing of schematics above {0} KB disabled, adjust config schematicMaxUploadSizeKb to change.", schematicMaxUploadSizeKb));
+                    capi.TriggerIngameError(this, "schematictoolarge", Lang.Get("worldedit-schematicupload-toolarge", schematicMaxUploadSizeKb));
                     return;
                 }
 
@@ -295,13 +320,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
                 else
                 {
-                    capi.World.Player.ShowChatNotification(Lang.Get("Sending {0} bytes of schematicdata to the server, this may take a while...", json.Length));
+                    capi.World.Player.ShowChatNotification(Lang.Get("Sending {0} bytes of schematicdata to the server, this may take a while...",
+                        json.Length));
                 }
 
-                capi.Event.RegisterCallback((dt) =>
-                {
-                    clientChannel.SendPacket<SchematicJsonPacket>(new SchematicJsonPacket() { Filename = info.Name, JsonCode = json });
-                }, 20, true);
+                capi.Event.RegisterCallback(
+                    (dt) =>
+                    {
+                        clientChannel.SendPacket<SchematicJsonPacket>(new SchematicJsonPacket()
+                        {
+                            Filename = info.Name,
+                            JsonCode = json
+                        });
+                    },
+                    20, true);
             }
         }
 
@@ -319,29 +351,47 @@ namespace Vintagestory.ServerMods.WorldEdit
                 IMiniDimension dim = capi.World.GetOrCreateDimension(msg.dimId, msg.pos.ToVec3d());
                 dim.ClearChunks();
                 dim.selectionTrackingOriginalPos = msg.pos;
+                dim.TrackSelection = msg.TrackSelection;
             }
         }
 
         private void OnServerWorkspace(WorldEditWorkspace workspace)
         {
             ownWorkspace = workspace;
+            ownWorkspace.ToolInstance = GetToolInstance(workspace.ToolName);
 
             isComposing = true;
             if (toolBarDialog != null && toolBarDialog.IsOpened())
             {
                 toolBarDialog.Recompose();
             }
+
             if (toolOptionsDialog != null && toolOptionsDialog.IsOpened())
             {
                 toolOptionsDialog.Recompose();
                 toolOptionsDialog.UnfocusElements();
             }
-            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled && toolBarDialog?.IsOpened() == true)
+
+            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled &&
+                toolBarDialog?.IsOpened() == true)
             {
                 OpenToolOptionsDialog("" + ownWorkspace.ToolName);
             }
 
+
             isComposing = false;
+        }
+
+        private ToolBase GetToolInstance(string workspaceToolName)
+        {
+            if (workspaceToolName == null) return null;
+            if (_toolInstances.TryGetValue(workspaceToolName, out var instance))
+            {
+                return instance;
+            }
+
+            _toolInstances[workspaceToolName] = Activator.CreateInstance(ToolRegistry.ToolTypes[ownWorkspace.ToolName]) as ToolBase;
+            return _toolInstances[workspaceToolName];
         }
 
         private bool OnHotkeyWorldEdit(KeyCombination t1)
@@ -366,6 +416,28 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     clientChannel.SendPacket(new RequestWorkSpacePacket());
 
+                    if (scroll == null)
+                    {
+                        scroll = new HudWorldEditInputCapture(capi, this);
+                        capi.Gui.RegisterDialog(scroll);
+                    }
+
+                    if (toolModeSelect == null)
+                    {
+                        toolModeSelect = new WorldEditScrollToolMode(capi, this);
+                        capi.Gui.RegisterDialog(toolModeSelect);
+                    }
+
+                    capi.Input.SetHotKeyHandler("worldeditcopy", OnHotkeyWorldEditCopy);
+                    capi.Input.SetHotKeyHandler("worldeditundo", OnHotkeyWorldEditUndo);
+
+
+                    if (!scroll.IsOpened())
+                    {
+                        scroll.TryOpen();
+                    }
+
+
                     if (toolBarsettings == null || capi.Settings.Bool.Get("developerMode", false))
                     {
                         capi.Assets.Reload(AssetCategory.dialog);
@@ -376,15 +448,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     toolBarDialog = new GuiJsonDialog(toolBarsettings, capi, false);
                     toolBarDialog.TryOpen(false);
-                    if (toolBarDialog != null)
-                    {
-                        toolBarDialog.OnClosed += () => {
-                            toolOptionsDialog?.TryClose();
-                            settingsDialog?.TryClose();
-                            controlsDialog?.TryClose();
-                            clientChannel.SendPacket(new RequestWorkSpacePacket());
-                        };
-                    }
+                    toolBarDialog.OnClosed += () => {
+                        toolOptionsDialog?.TryClose();
+                        settingsDialog?.TryClose();
+                        controlsDialog?.TryClose();
+                        clientChannel.SendPacket(new RequestWorkSpacePacket());
+                    };
 
                     if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled)
                     {
@@ -396,13 +465,17 @@ namespace Vintagestory.ServerMods.WorldEdit
                     dlgsettings.OnSet = OnSetValueSettings;
 
                     settingsDialog = new GuiJsonDialog(dlgsettings, capi, false);
-                    if(_showRightSettings)
-                        settingsDialog.TryOpen();
+                    if (ownWorkspace?.Rsp == true)
+                    {
+                        settingsDialog?.TryOpen();
+                    }
 
                     JsonDialogSettings controlsSettings = capi.Assets.Get<JsonDialogSettings>(new AssetLocation("dialog/worldedit-controls.json"));
                     controlsSettings.OnSet = OnSetValueControls;
+                    controlsSettings.OnGet = OnGetValueControls;
                     controlsDialog = new GuiJsonDialog(controlsSettings, capi, false);
                     controlsDialog.TryOpen();
+                    controlsDialog.Composers.First().Value.GetNumberInput("numberinput-5").DisableButtonFocus = true;
                 }
                 else
                 {
@@ -411,12 +484,39 @@ namespace Vintagestory.ServerMods.WorldEdit
                     settingsDialog?.TryClose();
                     controlsDialog?.TryClose();
                 }
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 capi.World.Logger.Error("Unable to load json dialogs:");
                 capi.World.Logger.Error(e);
             }
-            
+        }
+
+        private bool OnHotkeyWorldEditUndo(KeyCombination t1)
+        {
+            capi.SendChatMessage("/we undo");
+            return true;
+        }
+
+        private bool OnHotkeyWorldEditCopy(KeyCombination t1)
+        {
+            capi.SendChatMessage("/we copy");
+            return true;
+        }
+
+        private string OnGetValueControls(string elementcode)
+        {
+            switch (elementcode)
+            {
+                case "std.settingsAxisLock":
+                    return ownWorkspace?.ToolAxisLock.ToString() ?? "0";
+                case "std.settingsRsp":
+                    return ownWorkspace?.Rsp == true ? "1" : "0";
+                case "std.stepSize":
+                    return ownWorkspace?.StepSize.ToString() ?? "1";
+            }
+
+            return "";
         }
 
         private void OnSetValueControls(string elementCode, string newValue)
@@ -429,6 +529,46 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "redo":
                     capi.SendChatMessage("/we redo");
                     break;
+                case "std.settingsRsp":
+                    if (ownWorkspace != null)
+                    {
+                        ownWorkspace.Rsp = string.Equals(newValue, "1");
+                        if (ownWorkspace.Rsp)
+                        {
+                            settingsDialog?.TryOpen();
+                        }
+                        else
+                        {
+                            settingsDialog?.TryClose();
+                        }
+                    }
+
+                    capi.SendChatMessage("/we rsp " + ownWorkspace.Rsp);
+                    break;
+                case "std.settingsAxisLock":
+                {
+                    if (ownWorkspace != null)
+                    {
+                        ownWorkspace.ToolAxisLock = int.Parse(newValue);
+                    }
+
+                    capi.SendChatMessage("/we tal " + newValue);
+                    break;
+                }
+                case "std.stepSize":
+                {
+                    int.TryParse(newValue, out var size);
+                    if (ownWorkspace != null)
+                    {
+                        if (ownWorkspace.StepSize != size)
+                        {
+                            ownWorkspace.StepSize = size;
+                            capi.SendChatMessage("/we step " + newValue);
+                        }
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -478,7 +618,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     SendGlobalAmbient();
                     break;
                 case "precipitation":
-                    capi.SendChatMessage("/weather setprecip " + newValue.ToFloat()/100f);
+                    capi.SendChatMessage("/weather setprecip " + newValue.ToFloat() / 100f);
                     SendGlobalAmbient();
 
                     break;
@@ -505,12 +645,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "serveroverloadprotection":
                     capi.SendChatMessage("/we sovp " + newValue);
                     break;
-                case "tooloffsetmode":
-                    int num;
-                    int.TryParse(newValue, out num);
-                    ownWorkspace.ToolOffsetMode = (EnumToolOffsetMode)num;
-                    capi.SendChatMessage("/we tom " + num);
-                    break;
 
                 case "ambientparticles":
                     capi.World.AmbientParticles = newValue == "1" || newValue == "true";
@@ -521,10 +655,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                     capi.World.Player.WorldData.FreeMove = fly;
                     capi.World.Player.WorldData.NoClip = noclip;
 
-                    clientChannel.SendPacket(new ChangePlayerModePacket() { fly = fly, noclip = noclip });
+                    clientChannel.SendPacket(new ChangePlayerModePacket()
+                    {
+                        fly = fly,
+                        noclip = noclip
+                    });
                     break;
                 case "fphands":
-                    capi.Settings.Bool["hideFpHands"] = newValue != "true" && newValue != "1";   
+                    capi.Settings.Bool["hideFpHands"] = newValue != "true" && newValue != "1";
                     break;
                 case "overrideambient":
                     bool on = (newValue == "1" || newValue == "true");
@@ -554,14 +692,14 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.SendChatMessage("/setambient " + jsoncode);
 
             if (!beforeAmbientOverride) settingsDialog.ReloadValues();
-            
 
-            if (!enable && beforeAmbientOverride) capi.SendChatMessage("/weather setprecip auto");
+
+            if (!enable && beforeAmbientOverride) capi.SendChatMessage("/weather setprecipa");
             if (enable && !beforeAmbientOverride)
             {
                 capi.SendChatMessage("/weather acp 0");
             }
-            if (!enable && beforeAmbientOverride) { 
+            if (!enable && beforeAmbientOverride) {
                 capi.SendChatMessage("/weather acp 1");
             }
 
@@ -577,7 +715,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "timeofday":
                     return "" + (int)(capi.World.Calendar.FullHourOfDay / capi.World.Calendar.HoursPerDay * 24);
                 case "foglevel":
-                    return ""+ (int)(amb.FogDensity.Value * 2000);
+                    return "" + (int)(amb.FogDensity.Value * 2000);
 
                 case "flatfoglevel":
                     return "" + (int)(amb.FlatFogDensity.Value * 250);
@@ -586,19 +724,19 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return "" + (int)(amb.FlatFogYPos.Value);
 
                 case "fogred":
-                    return ""+(int)(amb.FogColor.Value[0] * 255);
+                    return "" + (int)(amb.FogColor.Value[0] * 255);
                 case "foggreen":
-                    return ""+(int)(amb.FogColor.Value[1] * 255);
+                    return "" + (int)(amb.FogColor.Value[1] * 255);
                 case "fogblue":
-                    return ""+(int)(amb.FogColor.Value[2] * 255);
+                    return "" + (int)(amb.FogColor.Value[2] * 255);
                 case "cloudlevel":
-                    return ""+ (int)(amb.CloudDensity.Value * 100);
+                    return "" + (int)(amb.CloudDensity.Value * 100);
                 case "cloudypos":
                     return "" + (int)(1 * 255);
                 case "cloudbrightness":
-                    return ""+ (int)(amb.CloudBrightness.Value * 100);
+                    return "" + (int)(amb.CloudBrightness.Value * 100);
                 case "movespeed":
-                    return ""+capi.World.Player.WorldData.MoveSpeedMultiplier;
+                    return "" + capi.World.Player.WorldData.MoveSpeedMultiplier;
                 case "axislock":
                     return "" + (int)capi.World.Player.WorldData.FreeMovePlaneLock;
                 case "pickingrange":
@@ -613,17 +751,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "flymode":
                     bool fly = capi.World.Player.WorldData.FreeMove;
                     bool noclip = capi.World.Player.WorldData.NoClip;
-                    if (fly && !noclip) return "1";
-                    if (fly && noclip) return "2";
+                    if (fly)
+                    {
+                        return !noclip ? "1" : "2";
+                    }
                     return "0";
                 case "fphands":
                     return capi.Settings.Bool["hideFpHands"] ? "0" : "1";
                 case "overrideambient":
                     return amb.FogColor.Weight >= 0.99f ? "1" : "0";
-                case "tooloffsetmode":
-                    if (ownWorkspace == null) return "0";
-
-                    return ((int)ownWorkspace.ToolOffsetMode) + "";
             }
 
             return "";
@@ -636,7 +772,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int index = Array.FindIndex(toolBarsettings.Rows[0].Elements[0].Values, w => w.Equals(toolname.ToLowerInvariant()));
             if (index < 0) return;
 
-            string code = toolBarsettings.Rows[0].Elements[0].Icons[index];
+            string code = toolBarsettings.Rows[0].Elements[0].Values[index];
 
             toolOptionsDialog?.TryClose();
 
@@ -656,7 +792,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             isComposing = false;
         }
 
-
         private void OnSetValueToolbar(string elementCode, string newValue)
         {
             if (isComposing) return;
@@ -666,11 +801,30 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "tooltype":
                     capi.SendChatMessage("/we t " + newValue);
                     OpenToolOptionsDialog(newValue);
+                    if (newValue == "-1")
+                    {
+                        scroll?.TryClose();
+                        toolModeSelect?.TryClose();
+
+                        capi.Input.GetHotKeyByCode("worldeditcopy").Handler = null;
+                        capi.Input.GetHotKeyByCode("worldeditundo").Handler = null;
+                    }
+                    else
+                    {
+                        if (scroll?.IsOpened() != true)
+                        {
+                            scroll?.TryOpen();
+                        }
+
+                        capi.Input.SetHotKeyHandler("worldeditcopy", OnHotkeyWorldEditCopy);
+                        capi.Input.SetHotKeyHandler("worldeditundo", OnHotkeyWorldEditUndo);
+                    }
+
                     break;
             }
         }
 
-        
+
         private void OnSetValueToolOptions(string code, string elem, string newval)
         {
             if (isComposing) return;
@@ -688,8 +842,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
             string cmd = rows[row].Elements[index].Param;
-            capi.SendChatMessage(cmd + " " + newval);
 
+            capi.SendChatMessage(cmd + " " + newval);
 
             if (ownWorkspace.FloatValues.ContainsKey(elem))
             {
@@ -698,8 +852,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     ownWorkspace.FloatValues[elem] = val;
                 }
-                
+
             }
+
             if (ownWorkspace.IntValues.ContainsKey(elem))
             {
                 int val = 0;
@@ -708,8 +863,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     ownWorkspace.IntValues[elem] = val;
                 }
             }
-            if (ownWorkspace.StringValues.ContainsKey(elem)) ownWorkspace.StringValues[elem] = newval;
 
+            if (ownWorkspace.StringValues.ContainsKey(elem)) ownWorkspace.StringValues[elem] = newval;
         }
 
         private string OnGetValueToolbar(string elementCode)
@@ -721,7 +876,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (ownWorkspace.ToolName == null || ownWorkspace.ToolName.Length == 0 || !ownWorkspace.ToolsEnabled) return "-1";
                 return ownWorkspace.ToolName.ToLowerInvariant();
             }
-            
+
             return "";
         }
 
@@ -734,9 +889,14 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (ownWorkspace.IntValues.ContainsKey(elementCode)) return "" + ownWorkspace.IntValues[elementCode];
             if (ownWorkspace.StringValues.ContainsKey(elementCode)) return "" + ownWorkspace.StringValues[elementCode];
 
+
+            if (elementCode == "tooloffsetmode")
+            {
+                return ownWorkspace == null ? "0" : ((int)ownWorkspace.ToolOffsetMode).ToString();
+            }
             return "";
         }
-        
+
         private void Event_LeaveWorld()
         {
             toolBarDialog?.Dispose();
@@ -744,35 +904,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             toolOptionsDialog?.Dispose();
             settingsDialog?.Dispose();
         }
-
-        private TextCommandResult HandleToggleRightSettings(TextCommandCallingArgs args)
-        {
-            if (args.Parsers[0].IsMissing)
-            {
-                return TextCommandResult.Success("Right setting panel is: " + (_showRightSettings ? "on" : "off"));
-            }
-            _showRightSettings = (bool)args[0];
-            if (toolBarDialog?.IsOpened() == true)
-            {
-                if (settingsDialog?.IsOpened() == true)
-                {
-                    settingsDialog.TryClose();
-                }
-                else
-                {
-                    settingsDialog?.TryOpen();
-                }
-            }
-
-            return TextCommandResult.Success("Right setting panel now: " + (_showRightSettings ? "on" : "off"));
-        }
     }
-
 
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class RequestWorkSpacePacket
     {
-
     }
 
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
@@ -795,6 +931,7 @@ namespace Vintagestory.ServerMods.WorldEdit
     {
         public BlockPos pos;
         public int dimId;
+        public bool TrackSelection;
     }
 
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
@@ -809,14 +946,19 @@ namespace Vintagestory.ServerMods.WorldEdit
     {
         [ProtoMember(1)]
         public int Mode; // 0 = break, 1 = build
+
         [ProtoMember(2)]
         public BlockPos Position;
+
         [ProtoMember(3)]
         public int Face;
+
         [ProtoMember(4)]
         public Vec3d HitPosition;
+
         [ProtoMember(5)]
         public int SelectionBoxIndex;
+
         [ProtoMember(6)]
         public bool DidOffset;
     }

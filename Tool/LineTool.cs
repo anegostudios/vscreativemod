@@ -1,6 +1,7 @@
 ﻿using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -26,6 +27,9 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.lineRemove"] = value ? 1 : 0; }
         }
 
+        public LineTool()
+        {
+        }
 
         public LineTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
@@ -33,13 +37,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey("std.lineRemove")) PlaceMode = false;
         }
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
                 case "tremove":
                     PlaceMode = args.Length > 1 && (args[1] == "1" || args[1] == "on");
-                    worldEdit.Good(workspace.ToolName + " remove mode now " + (PlaceMode ? "on" : "off"));
+                    WorldEdit.Good(player, workspace.ToolName + " remove mode now " + (PlaceMode ? "on" : "off"));
                     return true;
 
                 case "tm":
@@ -56,8 +62,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     LineMode = startpoint;
-                    worldEdit.Good(workspace.ToolName + " mode " + startpoint + " set.");
-                    workspace.ResendBlockHighlights(worldEdit);
+                    WorldEdit.Good(player, workspace.ToolName + " mode " + startpoint + " set.");
+                    workspace.ResendBlockHighlights();
 
                     return true;
             }
@@ -69,31 +75,26 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             handling = EnumHandling.PreventDefault;
             startPos = blockSel.Position.Copy();
-            worldEdit.Good("Line Tool start position set");
-
-            //int blockId = blockAccessRev.GetBlockId(blockSel.Position);
-            //worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-            //blockAccessRev.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, oldBlockId);
-            //blockAccessRev.Commit();
+            var player = (IServerPlayer)worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
+            WorldEdit.Good(player, "Line Tool start position set");
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
             if (startPos == null) return;
 
-            BlockPos destPos = blockSel.Position.AddCopy(blockSel.Face.Opposite);
+            var destPos = blockSel.Position.AddCopy(blockSel.Face.Opposite);
 
-            Block block = ba.GetBlock(blockSel.Position);
-            if (PlaceMode) block = ba.GetBlock(0);
+            var block = PlaceMode ? ba.GetBlock(0) : withItemStack.Block;
+
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
 
-            if (!worldEdit.MayPlace(block, startPos.ManhattenDistance(destPos))) return;
+            if (!workspace.MayPlace(block, startPos.ManhattenDistance(destPos))) return;
 
             GameMath.BresenHamPlotLine3d(startPos.X, startPos.Y, startPos.Z, destPos.X, destPos.Y, destPos.Z, (pos) => ba.SetBlock(block.BlockId, pos, withItemStack));
 
             if (LineMode == EnumLineStartPoint.LineStrip) startPos = destPos.Copy();
 
-            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlock(blockSel.Position).Id);
             ba.Commit();
         }
 
@@ -101,7 +102,5 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             get { return new Vec3i(0, 0, 0); }
         }
-        
-
     }
 }

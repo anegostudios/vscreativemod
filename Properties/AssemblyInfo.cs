@@ -62,7 +62,8 @@ using Vintagestory.API.Config;
 					temporalStability: ""false"",
                     temporalStorms: ""off"",
 					snowAccum: ""false"",
-					colorAccurateWorldmap: ""true""
+					colorAccurateWorldmap: ""true"",
+					temporalRifts: ""off""
 			    }
 		    }
 	    ],

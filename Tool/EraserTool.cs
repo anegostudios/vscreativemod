@@ -10,23 +10,28 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return "std.eraser"; }
         }
 
+        public EraserTool()
+        {
+        }
+
         public EraserTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
-            
+
         }
 
-        public override bool ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
+        public override void ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
-            return false;
+            PlaceOldBlock(worldEdit, oldBlockId, blockSel, placedBlock);
         }
 
-        public override bool ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
+        public override void ApplyToolBreak(WorldEdit worldEdit, Block oldblock, BlockSelection blockSel, BlockPos targetPos, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            oldblock = ba.GetBlock(0);
-            return PerformBrushAction(worldEdit, oldblock, -1, blockSel, targetPos, null);
+
+            PerformBrushAction(worldEdit, oldblock, oldblock.Id, blockSel, targetPos, null);
+            ba.Commit();
         }
-        
-        
+
+
     }
 }

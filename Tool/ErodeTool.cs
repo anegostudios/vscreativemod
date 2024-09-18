@@ -3,6 +3,7 @@ using System.Globalization;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -32,6 +33,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.useSelectedBlock"] = value ? 1 : 0; }
         }
 
+        double[,] kernel;
+
+        public ErodeTool()
+        {
+        }
 
         public ErodeTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
@@ -43,8 +49,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             PrecalcKernel();
         }
 
-        double[,] kernel;
-
         public override Vec3i Size
         {
             get
@@ -53,7 +57,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return new Vec3i(length, length, length);
             }
         }
-
 
         void PrecalcKernel()
         {
@@ -64,8 +67,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             kernel = GameMath.GenGaussKernel(sigma, 2 * blurRad + 1);
         }
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
                 case "tusb":
@@ -73,10 +78,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (val)
                     {
-                        worldEdit.Good("Will use only selected block for placement");
+                        WorldEdit.Good(player, "Will use only selected block for placement");
                     } else
                     {
-                        worldEdit.Good("Will use erode away placed blocks");
+                        WorldEdit.Good(player, "Will use erode away placed blocks");
                     }
 
                     UseSelectedBlock = val;
@@ -93,17 +98,17 @@ namespace Vintagestory.ServerMods.WorldEdit
                         BrushRadius = size;
                     }
 
-                    worldEdit.Good("Erode radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Erode radius " + BrushRadius + " set");
                     return true;
 
                 case "tgr":
                     BrushRadius++;
-                    worldEdit.Good("Erode radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Erode radius " + BrushRadius + " set");
                     return true;
 
                 case "tsr":
                     BrushRadius = Math.Max(0, BrushRadius - 1);
-                    worldEdit.Good("Erode radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Erode radius " + BrushRadius + " set");
                     return true;
 
                 case "tkr":
@@ -120,11 +125,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         KernelRadius = 10;
                         worldEdit.SendPlayerWorkSpace(workspace.PlayerUID);
-                        worldEdit.Good("Erode kernel radius " + KernelRadius + " set (limited to 10)");
+                        WorldEdit.Good(player, "Erode kernel radius " + KernelRadius + " set (limited to 10)");
                     }
                     else
                     {
-                        worldEdit.Good("Erode kernel radius " + KernelRadius + " set");
+                        WorldEdit.Good(player, "Erode kernel radius " + KernelRadius + " set");
                     }
 
                     PrecalcKernel();
@@ -145,15 +150,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         Iterations = 10;
                         worldEdit.SendPlayerWorkSpace(workspace.PlayerUID);
-                        worldEdit.Good("Iterations " + Iterations + " set (limited to 10)");
+                        WorldEdit.Good(player, "Iterations " + Iterations + " set (limited to 10)");
                     } else
                     {
-                        worldEdit.Good("Iterations " + Iterations + " set");
+                        WorldEdit.Good(player, "Iterations " + Iterations + " set");
                     }
 
-                    
 
-                    
+
+
 
                     return true;
             }
@@ -162,31 +167,24 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         }
 
-        public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
-        {
-            
-        }
-
-        public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
+        public override void OnInteractStart(WorldEdit worldEdit, BlockSelection blockSel)
         {
             if (BrushRadius <= 0) return;
 
-            Block blockToPlace = ba.GetBlock(blockSel.Position);
-            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            var blockToPlace = ba.GetBlock(blockSel.Position);
 
             int quantityBlocks = (int)((GameMath.PI * BrushRadius * BrushRadius) * (4 * KernelRadius * KernelRadius) * Iterations);
 
             quantityBlocks *= 4; // because erode is computationally extra expensive
 
-            if (!worldEdit.MayPlace(blockToPlace, quantityBlocks)) return;
+            if (!workspace.MayPlace(blockToPlace, quantityBlocks)) return;
 
             int q = Iterations;
             while (q-- > 0)
             {
-                ApplyErode(worldEdit, ba, blockSel.Position, blockToPlace, withItemStack);
+                ApplyErode(worldEdit, ba, blockSel.Position, blockToPlace, null);
             }
 
-            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlock(blockSel.Position).Id);
             ba.Commit();
         }
 
@@ -224,7 +222,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
                     }
 
-
                     dpos = pos.AddCopy(dx, 0, dz);
                     while (dpos.Y < mapSizeY && blockAccessor.GetBlockId(dpos.X, dpos.Y, dpos.Z) != 0) dpos.Up();
                     while (dpos.Y > 0 && (prevBlock = blockAccessor.GetBlock(dpos.X, dpos.Y, dpos.Z)).BlockId == 0) dpos.Down();
@@ -237,14 +234,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
                     else
                     {
-                        
                         if (useSelected)
                         {
                             ba.SetBlock(blockToPlace.BlockId, dpos.Up(), withItemStack);
                         } else {
                             ba.SetBlock(prevBlock.BlockId, dpos.Up());
                         }
-                        
                     }
                 }
             }

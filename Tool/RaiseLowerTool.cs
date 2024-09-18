@@ -1,6 +1,7 @@
 ﻿using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -13,8 +14,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
     public class RaiseLowerTool : ToolBase
     {
-        public NormalizedSimplexNoise noiseGen = NormalizedSimplexNoise.FromDefaultOctaves(2, 0.05, 0.8, 0);
-        Random rand = new Random();
+        public readonly NormalizedSimplexNoise noiseGen;
 
         public float Radius
         {
@@ -33,7 +33,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             get { return (EnumHeightToolMode)workspace.IntValues["std.raiseLowerMode"]; }
             set { workspace.IntValues["std.raiseLowerMode"] = (int)value; }
         }
-        
+
 
         public override Vec3i Size
         {
@@ -45,18 +45,25 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
+        public RaiseLowerTool()
+        {
+        }
+
         public RaiseLowerTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
+            noiseGen = NormalizedSimplexNoise.FromDefaultOctaves(2, 0.05, 0.8, 0);
             if (!workspace.FloatValues.ContainsKey("std.raiseLowerRadius")) Radius = 4;
             if (!workspace.FloatValues.ContainsKey("std.raiseLowerDepth")) Depth = 3;
             if (!workspace.IntValues.ContainsKey("std.raiseLowerMode")) Mode = EnumHeightToolMode.Uniform;
         }
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
-              
+
                 case "tr":
                     Radius = 0;
 
@@ -67,18 +74,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                         Radius = size;
                     }
 
-                    worldEdit.Good("Raise/Lower radius " + Radius + " set.");
+                    WorldEdit.Good(player, "Raise/Lower radius " + Radius + " set.");
                     return true;
 
 
                 case "tgr":
                     Radius++;
-                    worldEdit.Good("Raise/Lower radius " + Radius + " set");
+                    WorldEdit.Good(player, "Raise/Lower radius " + Radius + " set");
                     return true;
 
                 case "tsr":
                     Radius = Math.Max(0, Radius - 1);
-                    worldEdit.Good("Raise/Lower radius " + Radius + " set");
+                    WorldEdit.Good(player, "Raise/Lower radius " + Radius + " set");
                     return true;
 
 
@@ -92,7 +99,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         Depth = size;
                     }
 
-                    worldEdit.Good("Raise/Lower depth " + Depth + " set.");
+                    WorldEdit.Good(player, "Raise/Lower depth " + Depth + " set.");
 
                     return true;
 
@@ -109,7 +116,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         } catch (Exception) { }
                     }
 
-                    worldEdit.Good("Raise/Lower mode " + Mode + " set.");
+                    WorldEdit.Good(player, "Raise/Lower mode " + Mode + " set.");
 
                     return true;
             }
@@ -117,7 +124,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-       
+
         public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PassThrough;
@@ -128,7 +135,6 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             OnUse(worldEdit, blockSel.Position, oldBlockId, 1, withItemStack);
         }
-
 
         void OnUse(WorldEdit worldEdit, BlockPos pos, int oldBlockId, int sign, ItemStack withItemStack)
         {
@@ -147,7 +153,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             EnumHeightToolMode dist = Mode;
 
             int quantityBlocks = (int)(GameMath.PI * radSq) * (int)maxhgt;
-            if (!worldEdit.MayPlace(block, quantityBlocks)) return;
+            if (!workspace.MayPlace(block, quantityBlocks)) return;
 
             for (int dx = -radInt; dx <= radInt; dx++)
             {
@@ -175,7 +181,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                             height *= (float)gaussValue;
                             break;
-                        
+
                         case EnumHeightToolMode.Perlin:
 
                             height *= (float)noiseGen.Noise(dpos.X, dpos.Y, dpos.Z);
@@ -184,8 +190,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     while (dpos.Y > 0 && ba.GetBlock(dpos).Replaceable >= 6000) dpos.Down();
-                    
-                    
+
+
                     if (height < 0)
                     {
                         Erode(-height, dpos);
@@ -194,9 +200,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                         dpos.Up();
                         Grow(worldEdit.sapi.World, height, dpos, block, BlockFacing.UP, withItemStack);
                     }
-
-
-
                 }
             }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -25,6 +26,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.growShrinkMode"] = (int)value; }
         }
 
+        public GrowShrinkTool()
+        {
+        }
+
         public GrowShrinkTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
             if (!workspace.FloatValues.ContainsKey("std.growShrinkRadius")) BrushRadius = 10;
@@ -39,7 +44,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            GrowShrink(worldEdit, -1, blockSel, null, true);
+            GrowShrink(worldEdit, 0, blockSel, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
@@ -47,16 +52,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             GrowShrink(worldEdit, oldBlockId, blockSel, withItemStack);
         }
 
-      
-
         public bool GrowShrink(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack, bool shrink = false)
         {
             if (BrushRadius == 0) return false;
 
-            Block blockToPlace = ba.GetBlock(blockSel.Position);
-            if (shrink) blockToPlace = ba.GetBlock(0);
+            var blockToPlace = shrink ? ba.GetBlock(0) : withItemStack.Block;
 
-            int selectedBlockID = ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)).Id;
+            int selectedBlockID = shrink ? ba.GetBlock(blockSel.Position).Id : ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)).Id;
 
             int radInt = (int)Math.Ceiling(BrushRadius);
             float radSq = BrushRadius * BrushRadius;
@@ -104,20 +106,15 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ba.SetBlock(blockToPlace.BlockId, p, withItemStack);
             }
 
-            if (oldBlockId >= 0)
-            {
-                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlockId(blockSel.Position));
-            }
             ba.Commit();
-
 
             return true;
         }
 
-
-
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
                 case "tm":
@@ -134,7 +131,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     GrowShrinkMode = mode;
-                    worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
+                    WorldEdit.Good(player, workspace.ToolName + " mode " + mode + " set.");
 
                     return true;
 
@@ -148,24 +145,23 @@ namespace Vintagestory.ServerMods.WorldEdit
                         BrushRadius = size;
                     }
 
-                    worldEdit.Good("Grow/Shrink radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Grow/Shrink radius " + BrushRadius + " set");
 
                     return true;
 
                 case "tgr":
                     BrushRadius++;
-                    worldEdit.Good("Grow/Shrink radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Grow/Shrink radius " + BrushRadius + " set");
                     return true;
 
 
                 case "tsr":
                     BrushRadius = Math.Max(0, BrushRadius - 1);
-                    worldEdit.Good("Grow/Shrink radius " + BrushRadius + " set");
+                    WorldEdit.Good(player, "Grow/Shrink radius " + BrushRadius + " set");
                     return true;
             }
 
             return false;
         }
-        
     }
 }

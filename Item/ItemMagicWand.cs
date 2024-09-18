@@ -33,7 +33,11 @@ namespace Vintagestory.GameContent
 
         public override void OnHeldUseStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, EnumHandInteract useType, bool firstEvent, ref EnumHandHandling handling)
         {
-            if (!firstEvent) return;
+            if (!firstEvent)
+            {
+                handling = EnumHandHandling.PreventDefaultAction;
+                return;
+            }
             
             if (useType == EnumHandInteract.HeldItemAttack)
             {

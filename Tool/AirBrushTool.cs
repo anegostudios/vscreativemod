@@ -4,6 +4,7 @@ using System.Globalization;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -21,9 +22,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
     public class AirBrushTool : ToolBase
     {
-        public NormalizedSimplexNoise noiseGen = NormalizedSimplexNoise.FromDefaultOctaves(2, 0.05, 0.8, 0);
-        Random rand = new Random();
-        LCGRandom lcgRand;
+        private readonly Random _rand;
+        private readonly LCGRandom _lcgRand;
 
         public float Radius
         {
@@ -55,6 +55,9 @@ namespace Vintagestory.ServerMods.WorldEdit
             set { workspace.IntValues["std.airBrushMode"] = (int)value; }
         }
 
+        public AirBrushTool()
+        {
+        }
 
         public AirBrushTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccessor) : base(workspace, blockAccessor)
         {
@@ -64,9 +67,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey("std.airBrushPlaceMode")) PlaceMode = EnumAirBrushMode.Add;
             if (!workspace.IntValues.ContainsKey("std.airBrushMode")) BrushMode = EnumBrushMode.ReplaceSelected;
 
-            lcgRand = new LCGRandom(workspace.world.Seed);
+            _rand = new Random();
+            _lcgRand = new LCGRandom(workspace.world.Seed);
         }
-        
+
         public override Vec3i Size
         {
             get {
@@ -75,11 +79,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args[0])
             {
-
                 case "tr":
                     Radius = 0;
 
@@ -90,19 +95,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                         Radius = size;
                     }
 
-                    worldEdit.Good("Air Brush Radius " + Radius + " set.");
+                    WorldEdit.Good(player, "Air Brush Radius " + Radius + " set.");
 
                     return true;
 
-
                 case "tgr":
                     Radius++;
-                    worldEdit.Good("Air Brush Radius " + Radius + " set");
+                    WorldEdit.Good(player, "Air Brush Radius " + Radius + " set");
                     return true;
 
                 case "tsr":
                     Radius = Math.Max(0, Radius - 1);
-                    worldEdit.Good("Air Brush Radius " + Radius + " set");
+                    WorldEdit.Good(player, "Air Brush Radius " + Radius + " set");
                     return true;
 
                 case "tq":
@@ -115,7 +119,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         Quantity = quant;
                     }
 
-                    worldEdit.Good("Quantity " + Quantity + " set.");
+                    WorldEdit.Good(player, "Quantity " + Quantity + " set.");
 
                     return true;
 
@@ -134,8 +138,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
 
                         BrushMode = mode;
-                        worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
-                        workspace.ResendBlockHighlights(worldEdit);
+                        WorldEdit.Good(player, workspace.ToolName + " mode " + mode + " set.");
+                        workspace.ResendBlockHighlights();
                         return true;
                     }
 
@@ -154,11 +158,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
 
                         PlaceMode = mode;
-                        worldEdit.Good(workspace.ToolName + " mode " + mode + " set.");
-                        workspace.ResendBlockHighlights(worldEdit);
+                        WorldEdit.Good(player, workspace.ToolName + " mode " + mode + " set.");
+                        workspace.ResendBlockHighlights();
                         return true;
                     }
-
 
                 case "ta":
                     EnumAirBrushApply apply = EnumAirBrushApply.AnyFace;
@@ -174,11 +177,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
 
                     Apply = apply;
-                    worldEdit.Good(workspace.ToolName + " apply " + apply + " set.");
-                    workspace.ResendBlockHighlights(worldEdit);
+                    WorldEdit.Good(player, workspace.ToolName + " apply " + apply + " set.");
+                    workspace.ResendBlockHighlights();
                     return true;
-
-
             }
 
             return false;
@@ -187,11 +188,13 @@ namespace Vintagestory.ServerMods.WorldEdit
         public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            OnApply(worldEdit, -1, blockSel, null, true);
+            OnApply(worldEdit, 0, blockSel, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
+            var placedBlock = ba.GetBlock(blockSel.Position);
+            PlaceOldBlock(worldEdit, oldBlockId, blockSel, placedBlock);
             OnApply(worldEdit, oldBlockId, blockSel, withItemStack, false);
         }
 
@@ -200,17 +203,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (Quantity == 0 || Radius == 0) return;
 
             float radSq = Radius * Radius;
-            
 
-            Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
-            Block block = ba.GetBlock(blockSel.Position);
-            if (isbreak) block = ba.GetBlock(0);
+            var selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
+            var block = isbreak ? ba.GetBlock(0) : withItemStack.Block;
 
-            if (!worldEdit.MayPlace(block, (int)radSq * 2)) return;
+            if (!workspace.MayPlace(block, (int)radSq * 2)) return;
 
-            if (oldBlockId >= 0) worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
-            lcgRand.SetWorldSeed(rand.Next());
-            lcgRand.InitPositionSeed(blockSel.Position.X / GlobalConstants.ChunkSize, blockSel.Position.Z / GlobalConstants.ChunkSize);
+
+            _lcgRand.SetWorldSeed(_rand.Next());
+            _lcgRand.InitPositionSeed(blockSel.Position.X / GlobalConstants.ChunkSize, blockSel.Position.Z / GlobalConstants.ChunkSize);
 
             int xRadInt = (int)Math.Ceiling(Radius);
             int yRadInt = (int)Math.Ceiling(Radius);
@@ -255,7 +256,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             }
                         }
                     }
-                }   
+                }
             }
 
             List<BlockPos> viablePositionsList = new List<BlockPos>(viablePositions);
@@ -265,31 +266,22 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 if (viablePositionsList.Count == 0) break;
 
-                if (q < 1 && rand.NextDouble() > q) break;
+                if (q < 1 && _rand.NextDouble() > q) break;
 
-                int index = rand.Next(viablePositionsList.Count);
+                int index = _rand.Next(viablePositionsList.Count);
                 dpos = viablePositionsList[index];
                 viablePositionsList.RemoveAt(index);
-                    
+
                 if (mode == EnumAirBrushMode.Add)
                 {
-                    block.TryPlaceBlockForWorldGen(ba, dpos, BlockFacing.UP, lcgRand);
+                    block.TryPlaceBlockForWorldGen(ba, dpos, BlockFacing.UP, _lcgRand);
                 } else
                 {
                     ba.SetBlock(block.BlockId, dpos, withItemStack);
                 }
-                
-            }
-
-            if (oldBlockId >= 0)
-            {
-                ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetBlock(blockSel.Position).Id);
             }
 
             ba.Commit();
-
-
-            return;
         }
     }
 }

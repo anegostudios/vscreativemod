@@ -1,15 +1,23 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
 using Vintagestory.API.Util;
+using VSCreativeMod;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class SelectTool : ToolBase
     {
-        public virtual string Prefix { get { return "std.select"; } }
+        public virtual string Prefix
+        {
+            get { return "std.select"; }
+        }
 
+        public override bool ScrollEnabled => true;
 
         IBlockAccessor blockAccess;
         HashSet<Block> edgeBlocksCache = new HashSet<Block>();
@@ -26,10 +34,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             private set { workspace.StringValues[Prefix + "magicEdgeBlocks"] = string.Join(",", value); }
         }
 
+        public SelectTool()
+        {
+        }
+
         public SelectTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
             if (!workspace.IntValues.ContainsKey(Prefix + "magicSelect")) MagicSelect = false;
-            if (!workspace.StringValues.ContainsKey(Prefix + "magicEdgeBlocks")) SetEdgeBlocks(workspace.world, new string[] { "air", "soil-*", "tallgrass-*" });
+            if (!workspace.StringValues.ContainsKey(Prefix + "magicEdgeBlocks"))
+                SetEdgeBlocks(workspace.world, new string[] { "air", "soil-*", "tallgrass-*" });
             else SetEdgeBlocks(workspace.world, EdgeBlocks);
         }
 
@@ -50,7 +63,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (block?.Code == null) continue;
 
                 for (int i = 0; i < blockCodesA.Length; i++)
-                { 
+                {
                     if (block.WildCardMatch(blockCodesA[i]))
                     {
                         edgeBlocksCache.Add(block);
@@ -59,67 +72,91 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-
-
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
             switch (args.PopWord())
             {
-                case "magic":
+                case "normalize":
+                    var tmpEnd = workspace.EndMarker.Copy();
+                    var tmpStart = workspace.StartMarker.Copy();
+                    workspace.StartMarkerExact = new Vec3d(
+                        Math.Min(tmpStart.X, tmpEnd.X),
+                        Math.Min(tmpStart.Y, tmpEnd.Y),
+                        Math.Min(tmpStart.Z, tmpEnd.Z)
+                    );
+                    workspace.StartMarkerExact.Add(0.5);
+
+                    workspace.EndMarkerExact = new Vec3d(
+                        Math.Max(tmpStart.X, tmpEnd.X),
+                        Math.Max(tmpStart.Y, tmpEnd.Y),
+                        Math.Max(tmpStart.Z, tmpEnd.Z)
+                    );
+                    workspace.EndMarkerExact.Add(-0.5);
+                    workspace.UpdateSelection();
+                    if (args.PopWord() != "quiet")
                     {
-                        MagicSelect = (bool)args.PopBool(false);
-
-                        worldEdit.Good("Magic select now " + (MagicSelect ? "on" : "off"));
-                        return true;
-                    }
-
-                case "edgeblocks":
-                    {
-                        string arg = args.PopWord("list");
-
-                        switch (arg)
-                        {
-                            case "list":
-                                worldEdit.Good("Edge blocks: " + string.Join(", ", EdgeBlocks));
-                                break;
-
-                            case "add":
-                                string blockcode = args.PopAll();
-
-                                if (matchesAnyBlock(worldEdit.sapi, blockcode))
-                                {
-                                    EdgeBlocks = EdgeBlocks.Append(args.PopAll());
-                                    worldEdit.Good("Ok, edge block '" + blockcode + "' added.");
-                                    SetEdgeBlocks(worldEdit.sapi.World, EdgeBlocks);
-                                } else
-                                {
-                                    worldEdit.Good("Error, block code/wildcard '" + blockcode + "' does not match any known blocks.");
-                                }
-
-                                
-                                break;
-
-                            case "remove":
-
-                                List<string> elems = new List<string>(EdgeBlocks);
-                                if (elems.Remove(args.PopAll()))
-                                {
-                                    worldEdit.Good("Ok, edge block removed.");
-                                    SetEdgeBlocks(worldEdit.sapi.World, elems.ToArray());
-                                } else
-                                {
-                                    worldEdit.Good("No such edge block in list.");
-                                }
-
-                                break;
-
-                            default:
-                                worldEdit.Bad("Invalid arg. Syntax: /we edgeblocks or /we edgeblocks [list|add|remove] [blockcode]");
-                                break;
-                        }
+                        WorldEdit.Good(player, "Start and End marker normalized");
                     }
                     return true;
-                    
+                    break;
+                case "magic":
+                {
+                    MagicSelect = (bool)args.PopBool(false);
+
+                        WorldEdit.Good(player, "Magic select now " + (MagicSelect ? "on" : "off"));
+                    return true;
+                }
+
+                case "edgeblocks":
+                {
+                    string arg = args.PopWord("list");
+
+                    switch (arg)
+                    {
+                        case "list":
+                                WorldEdit.Good(player, "Edge blocks: " + string.Join(", ", EdgeBlocks));
+                            break;
+
+                        case "add":
+                            string blockcode = args.PopAll();
+
+                            if (matchesAnyBlock(worldEdit.sapi, blockcode))
+                            {
+                                EdgeBlocks = EdgeBlocks.Append(args.PopAll());
+                                    WorldEdit.Good(player, "Ok, edge block '" + blockcode + "' added.");
+                                SetEdgeBlocks(worldEdit.sapi.World, EdgeBlocks);
+                            }
+                            else
+                            {
+                                    WorldEdit.Good(player, "Error, block code/wildcard '" + blockcode + "' does not match any known blocks.");
+                            }
+
+
+                            break;
+
+                        case "remove":
+
+                            List<string> elems = new List<string>(EdgeBlocks);
+                            if (elems.Remove(args.PopAll()))
+                            {
+                                    WorldEdit.Good(player, "Ok, edge block removed.");
+                                SetEdgeBlocks(worldEdit.sapi.World, elems.ToArray());
+                            }
+                            else
+                            {
+                                    WorldEdit.Good(player, "No such edge block in list.");
+                            }
+
+                            break;
+
+                        default:
+                                WorldEdit.Bad(player, "Invalid arg. Syntax: /we edgeblocks or /we edgeblocks [list|add|remove] [blockcode]");
+                            break;
+                    }
+                }
+                    return true;
             }
 
             return false;
@@ -132,6 +169,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 if (block.WildCardMatch(loc)) return true;
             }
+
             return false;
         }
 
@@ -141,8 +179,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!MagicSelect)
             {
-                Vec3d startPos = blockSelection.Position.ToVec3d().Add(0.5,0.5,0.5);
-                worldEdit.SetStartPos(startPos);
+                workspace.SetStartPos(blockSelection.Position.ToVec3d().Add(0.5));
             }
         }
 
@@ -155,30 +192,23 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (MagicSelect)
             {
                 Cuboidi sele = MagiSelect(blockSelection);
-                worldEdit.SetStartPos(sele.Start.AsBlockPos.ToVec3d());
-                worldEdit.SetEndPos(sele.End.AsBlockPos.ToVec3d());
+                workspace.SetStartPos(new Vec3d(sele.X1, sele.Y1, sele.Z1), false);
+                workspace.SetEndPos(new Vec3d(sele.X2, sele.Y2, sele.Z2).Add(-0.5, -0.5, -0.5));
 
                 workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
             }
             else
             {
-                Vec3d endPos = blockSelection.Position.ToVec3d().Add(0.5,0.5,0.5);
-                worldEdit.SetEndPos(endPos);
-
-                workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
+                workspace.SetEndPos(blockSelection.Position.ToVec3d().Add(0.5, 0.5, 0.5));
             }
-
-            base.OnInteractStart(worldEdit, blockSelection);
         }
-
-        
 
         private Cuboidi MagiSelect(BlockSelection blockSelection)
         {
             BlockPos pos = blockSelection.Position;
             Cuboidi selection = new Cuboidi(pos, pos.AddCopy(1, 1, 1));
             bool didGrowAny = true;
-            
+
             int i = 0;
 
             while (didGrowAny && i < 600)
@@ -190,7 +220,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     TryGrowY(selection, false) ||
                     TryGrowZ(selection, true) ||
                     TryGrowZ(selection, false)
-                ;
+                    ;
                 i++;
             }
 
@@ -218,7 +248,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (positive)
                 {
                     selection.X2++;
-                } else
+                }
+                else
                 {
                     selection.X1--;
                 }
@@ -228,8 +259,6 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             return false;
         }
-
-
 
         private bool TryGrowY(Cuboidi selection, bool positive)
         {
@@ -263,7 +292,6 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             return false;
         }
-
 
         private bool TryGrowZ(Cuboidi selection, bool positive)
         {
@@ -300,23 +328,46 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public override void Load(ICoreAPI api)
         {
-            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(true);
+            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(true, (IServerPlayer)api.World.PlayerByUid(workspace.PlayerUID));
         }
 
         public override void Unload(ICoreAPI api)
         {
-            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(false);
+            api.ModLoader.GetModSystem<WorldEdit>().SelectionMode(false, (IServerPlayer)api.World.PlayerByUid(workspace.PlayerUID));
         }
-
-        public override void HighlightBlocks(IPlayer player, WorldEdit we, EnumHighlightBlocksMode mode)
-        {
-            we.sapi.World.HighlightBlocks(player, (int)EnumHighlightSlot.Brush, GetBlockHighlights(we), GetBlockHighlightColors(we), EnumHighlightBlocksMode.Absolute, GetBlockHighlightShape(we));
-        }
-
 
         public override Vec3i Size
         {
             get { return new Vec3i(0, 0, 0); }
+        }
+
+        public override List<SkillItem> GetAvailableModes(ICoreClientAPI capi)
+        {
+            var move = EnumWeToolMode.Move.ToString();
+            var moveFar = EnumWeToolMode.MoveFar.ToString();
+            var moveNear = EnumWeToolMode.MoveNear.ToString();
+            var multilineItems = new List<SkillItem>()
+            {
+                new()
+                {
+                    Name = Lang.Get(move),
+                    Code = new AssetLocation(move)
+                },
+                new()
+                {
+                    Texture = capi.Gui.LoadSvgWithPadding(new AssetLocation("textures/icons/worldedit/moveNear.svg"), 48, 48, 5, ColorUtil.WhiteArgb),
+                    Name = Lang.Get(moveNear),
+                    Code = new AssetLocation(moveNear)
+                },
+                new()
+                {
+                    Texture = capi.Gui.LoadSvgWithPadding(new AssetLocation("textures/icons/worldedit/moveFar.svg"), 48, 48, 5, ColorUtil.WhiteArgb),
+                    Name = Lang.Get(moveFar),
+                    Code = new AssetLocation(moveFar)
+                }
+            };
+            multilineItems[0].WithIcon(capi, "move");
+            return multilineItems;
         }
     }
 }

@@ -13,25 +13,18 @@ using Vintagestory.API.Server;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
-
-    public partial class WorldEdit : ModSystem
+    public partial class WorldEdit
     {
         public ICoreServerAPI sapi;
 
         public WorldEditClientHandler clientHandler;
         IServerNetworkChannel serverChannel;
 
-        Dictionary<string, WorldEditWorkspace> workspaces = new Dictionary<string, WorldEditWorkspace>();
+        Dictionary<string, WorldEditWorkspace> workspaces = new();
 
+        public static string ExportFolderPath;
 
-        // Unpretty, but too lazy to type it over and over again ;-)
-        IServerPlayer fromPlayer;
-        public IMiniDimension previewBlocks;
-        WorldEditWorkspace workspace; 
-        string exportFolderPath;
-        
         public static bool ReplaceMetaBlocks { get; set; }
-
 
         public override void StartPre(ICoreAPI api)
         {
@@ -61,7 +54,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             this.sapi = sapi;
 
-            exportFolderPath = sapi.GetOrCreateDataPath("WorldEdit");
+            ExportFolderPath = sapi.GetOrCreateDataPath("WorldEdit");
 
             sapi.Permissions.RegisterPrivilege("worldedit", "Ability to use world edit tools");
 
@@ -104,10 +97,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .EndSub()
                 .EndSub()
             ;
-
-            previewBlocks = sapi.World.BlockAccessor.CreateMiniDimension(new Vec3d());
-            int dimensionId = sapi.Server.SetMiniDimension(previewBlocks, 0);  //0 here matches BlockAccessorMovable.SelectionTrackingDimension
-            previewBlocks.SetSubDimensionId(dimensionId);
         }
 
         private TextCommandResult downloadClaim(TextCommandCallingArgs args)
@@ -138,15 +127,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
 
                 blockdata.Pack(world, minPos);
-                
+
                 serverChannel.SendPacket(new SchematicJsonPacket() {
-                    Filename = "claim-"+GamePaths.ReplaceInvalidChars(claim.Description), 
+                    Filename = "claim-"+GamePaths.ReplaceInvalidChars(claim.Description),
                     JsonCode = blockdata.ToJson() }, plr);
 
                 return TextCommandResult.Success(Lang.Get("Ok, claim sent"));
             }
         }
-
 
         private TextCommandResult exportClaim(TextCommandCallingArgs args)
         {
@@ -177,12 +165,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 blockdata.Pack(world, minPos);
                 string filename = "claim-" + claimid + "-" + GamePaths.ReplaceInvalidChars(plr.PlayerName) + ".json";
-                blockdata.Save(Path.Combine(exportFolderPath, filename));
+                blockdata.Save(Path.Combine(ExportFolderPath, filename));
 
                 return TextCommandResult.Success(Lang.Get("Ok, claim saved to file " + filename));
             }
         }
-
 
         private void OnWorldInteract(IServerPlayer fromPlayer, WorldInteractPacket packet)
         {
@@ -218,8 +205,11 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 if (error == null)
                 {
-                    this.fromPlayer = fromPlayer;
-                    impTool.SetBlockDatas(this, new BlockSchematic[] { schematic });
+                    impTool.SetBlockDatas(this, schematic);
+                    var pos = fromPlayer.CurrentBlockSelection?.Position?.UpCopy() ?? fromPlayer.Entity.Pos.AsBlockPos;
+                    var origin = schematic.GetStartPos(pos, impTool.Origin);
+                    workspace.CreatePreview(schematic, origin);
+                    workspace.PreviewPos = origin;
                     fromPlayer.SendMessage(GlobalConstants.CurrentChatGroup, Lang.Get("Ok, schematic loaded into clipboard."), EnumChatType.CommandSuccess);
                 }
                 else
@@ -276,7 +266,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             ToolRegistry.RegisterToolType(toolname, tool);
         }
 
-
         private void OnSwitchedGameMode(IServerPlayer player)
         {
             if (player.WorldData.CurrentGameMode == EnumGameMode.Creative) return;
@@ -285,15 +274,11 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.ToolsEnabled = false;
             workspace.StartMarker = null;
             workspace.EndMarker = null;
-            fromPlayer = player;
-            workspace.ResendBlockHighlights(this);
+            workspace.ResendBlockHighlights();
         }
-
 
         private void Event_PlayerNowPlaying(IServerPlayer player)
         {
-            fromPlayer = player;
-
             WorldEditWorkspace workspace = GetOrCreateWorkSpace(player);
 
             // Initialize all tools once to build up the workspace for the client gui tool options
@@ -302,18 +287,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                 ToolRegistry.InstanceFromType(val.Key, workspace, workspace.revertableBlockAccess);
             }
 
-            if (workspace.ToolsEnabled)
+            if (workspace.ToolsEnabled && workspace.ToolInstance != null)
             {
-                workspace.ToolInstance.Load(sapi);
-                WorldEditWorkspace prev = this.workspace;
-                this.workspace = workspace;
-                workspace.ResendBlockHighlights(this);
-                this.workspace = prev;
+                workspace.ToolInstance?.Load(sapi);
+                workspace.ResendBlockHighlights();
                 SendPlayerWorkSpace(player.PlayerUID);
             }
             else
             {
-                workspace.HighlightSelectedArea();
+                if (player.WorldData.CurrentGameMode == EnumGameMode.Creative)
+                {
+                    SendPlayerWorkSpace(player.PlayerUID);
+                }
             }
         }
 
@@ -383,6 +368,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         revertableBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, workspace);
 
                         workspace.FromBytes(reader);
+                        workspace.Init(sapi);
                         if (workspace.PlayerUID == null)
                         {
                             continue;
@@ -398,24 +384,26 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-
-        public bool CanUseWorldEdit(IPlayer player, bool showError = false)
+        public static bool
+            CanUseWorldEdit(IServerPlayer player, bool showError = false)
         {
             if (player.WorldData.CurrentGameMode != EnumGameMode.Creative)
             {
-                if (showError) Bad("Only available in creative mode.");
+                if (showError)
+                {
+                    player.SendMessage(GlobalConstants.GeneralChatGroup, "Only available in creative mode.", EnumChatType.CommandError);
+                }
                 return false;
             }
 
-            if (!((IServerPlayer)player).HasPrivilege("worldedit"))
+            if (!player.HasPrivilege("worldedit"))
             {
-                if (showError) Bad("No privilege to use");
+                player.SendMessage(GlobalConstants.GeneralChatGroup, "No privilege to use", EnumChatType.CommandError);
                 return false;
             }
 
             return true;
         }
-
 
         WorldEditWorkspace GetOrCreateWorkSpace(IPlayer player)
         {
@@ -428,15 +416,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             else
             {
                 IBlockAccessorRevertable revertableBlockAccess = sapi.World.GetBlockAccessorRevertable(true, true);
-                workspaces[playeruid] = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
+                var workspace = workspaces[playeruid] = new WorldEditWorkspace(sapi.World, revertableBlockAccess);
                 revertableBlockAccess.BeforeCommit += (ba) => RevertableBlockAccess_BeforeCommit(ba, workspace);
-
-                workspaces[playeruid].PlayerUID = playeruid;
-                return workspaces[playeruid];
+                workspace.Init(sapi);
+                workspace.PlayerUID = playeruid;
+                return workspace;
             }
         }
-
-
 
         private TextCommandResult GenMarkedMultiblockCode(IServerPlayer player)
         {
@@ -445,6 +431,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             List<Vec4i> offsets = new List<Vec4i>();
 
             MultiblockStructure ms = new MultiblockStructure();
+            var workspace = workspaces[player.PlayerUID];
 
             sapi.World.BlockAccessor.WalkBlocks(workspace.StartMarker, workspace.EndMarker, (block, x, y, z) =>
             {
@@ -474,49 +461,8 @@ namespace Vintagestory.ServerMods.WorldEdit
             sb.AppendLine("}");
 
             sapi.World.Logger.Notification("Multiblockstructure centered around {0}:\n{1}", centerPos, sb.ToString());
-            return TextCommandResult.Success("Json code written to server-main.txt");
+            return TextCommandResult.Success("Json code written to server-main.log");
         }
-
-        public TextCommandResult SetStartPos(Vec3d pos)
-        {
-            workspace.StartMarkerExact = pos.Clone();
-            updateSelection();
-            return TextCommandResult.Success("Start position " + workspace.StartMarkerExact.AsBlockPos + " marked");
-        }
-
-        public TextCommandResult SetEndPos(Vec3d pos)
-        {
-            workspace.EndMarkerExact = pos.Clone();
-            updateSelection();
-            return TextCommandResult.Success("End position " + workspace.EndMarkerExact.AsBlockPos + " marked");
-        }
-
-        void updateSelection()
-        {
-            if (workspace.StartMarkerExact != null && workspace.EndMarkerExact != null)
-            {
-                workspace.StartMarker = new BlockPos(
-                    (int)Math.Min(workspace.StartMarkerExact.X, workspace.EndMarkerExact.X),
-                    (int)Math.Min(workspace.StartMarkerExact.Y, workspace.EndMarkerExact.Y),
-                    (int)Math.Min(workspace.StartMarkerExact.Z, workspace.EndMarkerExact.Z)
-                );
-
-                workspace.EndMarker = new BlockPos(
-                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.X, workspace.EndMarkerExact.X)),
-                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.Y, workspace.EndMarkerExact.Y)),
-                    (int)Math.Ceiling(Math.Max(workspace.StartMarkerExact.Z, workspace.EndMarkerExact.Z))
-                );
-
-                EnsureInsideMap(workspace.StartMarker);
-                EnsureInsideMap(workspace.EndMarker);
-            }
-            
-            workspace.HighlightSelectedArea();
-            workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
-            SendPlayerWorkSpace(workspace.PlayerUID);
-        }
-
-
 
         private int RebuildRainMap()
         {
@@ -562,7 +508,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     }
                 }
 
-
                 sapi.WorldManager.ResendMapChunk(cx, cz, true);
                 val.Value.MarkDirty();
             }
@@ -577,17 +522,17 @@ namespace Vintagestory.ServerMods.WorldEdit
             pos.Z = GameMath.Clamp(pos.Z, 0, sapi.WorldManager.MapSizeZ - 1);
         }
 
-
-        public void SelectionMode(bool on)
+        public void SelectionMode(bool on, IServerPlayer player)
         {
-            if (fromPlayer == null) return;
+            if (player == null) return;
 
-            fromPlayer.WorldData.AreaSelectionMode = on;
-            fromPlayer.BroadcastPlayerData();
+            player.WorldData.AreaSelectionMode = on;
+            player.BroadcastPlayerData();
         }
 
         private TextCommandResult HandleHistoryChange(TextCommandCallingArgs args, bool redo)
         {
+            var workspace = GetWorkSpace(args.Caller.Player.PlayerUID);
             if (redo && workspace.revertableBlockAccess.CurrentHistoryState == 0)
             {
                 return TextCommandResult.Error("Can't redo. Already on newest history state.");
@@ -602,6 +547,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int steps = (int)args[0];
 
             workspace.revertableBlockAccess.ChangeHistoryState(steps * (redo ? -1 : 1));
+            workspace.ResendBlockHighlights();
 
             int quantityChanged = Math.Abs(prevHstate - workspace.revertableBlockAccess.CurrentHistoryState);
 
@@ -612,10 +558,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public void OnInteractStart(IServerPlayer byPlayer, BlockSelection blockSel)
         {
-            this.fromPlayer = byPlayer;
             if (!CanUseWorldEdit(byPlayer)) return;
 
-            workspace = GetOrCreateWorkSpace(byPlayer);
+            var workspace = GetOrCreateWorkSpace(byPlayer);
             if (!workspace.ToolsEnabled) return;
             if (workspace.ToolInstance == null) return;
 
@@ -624,10 +569,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public void OnAttackStart(IServerPlayer byPlayer, BlockSelection blockSel)
         {
-            this.fromPlayer = byPlayer;
             if (!CanUseWorldEdit(byPlayer)) return;
 
-            workspace = GetOrCreateWorkSpace(byPlayer);
+            var workspace = GetOrCreateWorkSpace(byPlayer);
             if (!workspace.ToolsEnabled) return;
             if (workspace.ToolInstance == null) return;
 
@@ -635,197 +579,36 @@ namespace Vintagestory.ServerMods.WorldEdit
         }
 
 
-        private void OnDidBuildBlock(IServerPlayer byPlayer, int oldblockId, BlockSelection blockSel, ItemStack withItemStack)
+        private void OnDidBuildBlock(IServerPlayer byPlayer, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
         {
-            this.fromPlayer = byPlayer;
             if (!CanUseWorldEdit(byPlayer)) return;
 
-            workspace = GetOrCreateWorkSpace(byPlayer);
+            var workspace = GetOrCreateWorkSpace(byPlayer);
             if (!workspace.ToolsEnabled) return;
             if (workspace.ToolInstance == null) return;
 
-            workspace.ToolInstance.OnBuild(this, oldblockId, blockSel.Clone(), withItemStack);
+            workspace.ToolInstance.OnBuild(this, oldBlockId, blockSel.Clone(), withItemStack);
         }
 
         private void OnBreakBlock(IServerPlayer byBplayer, BlockSelection blockSel, ref float dropQuantityMultiplier, ref EnumHandling handling)
         {
-            this.fromPlayer = byBplayer;
             if (!CanUseWorldEdit(byBplayer)) return;
 
-            workspace = GetOrCreateWorkSpace(byBplayer);
+            var workspace = GetOrCreateWorkSpace(byBplayer);
             if (!workspace.ToolsEnabled) return;
             if (workspace.ToolInstance == null) return;
 
             workspace.ToolInstance.OnBreak(this, blockSel, ref handling);
         }
 
-        private BlockSchematic CopyArea(BlockPos start, BlockPos end, bool notLiquids = false)
+        public static void Good(IServerPlayer player, string message, params object[] args)
         {
-            BlockPos startPos = new BlockPos(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Min(start.Z, end.Z));
-            BlockSchematic blockdata = new BlockSchematic();
-            blockdata.OmitLiquids = notLiquids;
-            blockdata.AddArea(sapi.World, start, end);
-            blockdata.Pack(sapi.World, startPos);
-            return blockdata;
+            player.SendMessage(0, string.Format(message, args), EnumChatType.CommandSuccess);
         }
 
-        /// <summary>
-        /// Creates a mini-dimension (a BlockAccessorMovable) and places the schematic in it, this can then be moved and rendered
-        /// </summary>
-        public IMiniDimension CreateDimensionFromSchematic(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin, IMiniDimension miniDimension = null)
+        public static void Bad(IServerPlayer player, string message, params object[] args)
         {
-            BlockPos originPos = blockData.GetStartPos(startPos, origin);
-
-            EnumAxis? axis = null;
-            if (workspace.ImportFlipped) axis = EnumAxis.Y;
-
-            BlockSchematic rotated = blockData.ClonePacked();
-            rotated.TransformWhilePacked(sapi.World, origin, workspace.ImportAngle, axis);
-
-            rotated.Init(workspace.revertableBlockAccess);
-
-            int subDimensionId;
-            if (miniDimension == null)
-            {
-                miniDimension = workspace.revertableBlockAccess.CreateMiniDimension(new Vec3d(originPos.X, originPos.Y, originPos.Z));
-                subDimensionId = sapi.Server.LoadMiniDimension(miniDimension);
-                if (subDimensionId < 0) return null;
-                miniDimension.SetSubDimensionId(subDimensionId);
-                miniDimension.SetSelectionTrackingSubId_Server(subDimensionId);
-            }
-            else
-            {
-                miniDimension.CurrentPos.SetPos(originPos);
-            }
-
-            originPos.Sub(startPos);
-            originPos.SetDimension(1);
-            miniDimension.AdjustPosForSubDimension(originPos);
-            rotated.Place(miniDimension, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
-            rotated.PlaceDecors(miniDimension, originPos);
-            return miniDimension;
-        }
-
-        public void DestroyPreview()
-        {
-            previewBlocks.ClearChunks();
-            previewBlocks.UnloadUnusedServerChunks();
-            SendPreviewOriginToClient(previewBlocks.selectionTrackingOriginalPos, -1);
-        }
-
-        private void PasteBlockData(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin)
-        {
-            BlockPos originPos = blockData.GetStartPos(startPos, origin);
-
-            EnumAxis? axis = null;
-            if (workspace.ImportFlipped) axis = EnumAxis.Y;
-
-            BlockSchematic rotated = blockData.ClonePacked();
-            rotated.TransformWhilePacked(sapi.World, origin, workspace.ImportAngle, axis);
-
-            rotated.Init(workspace.revertableBlockAccess);
-            rotated.Place(workspace.revertableBlockAccess, sapi.World, originPos, EnumReplaceMode.ReplaceAll, ReplaceMetaBlocks);
-            rotated.PlaceDecors(workspace.revertableBlockAccess, originPos);
-            workspace.revertableBlockAccess.Commit();
-
-            blockData.PlaceEntitiesAndBlockEntities(workspace.revertableBlockAccess, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
-
-            workspace.revertableBlockAccess.CommitBlockEntityData();
-        }
-
-        private TextCommandResult ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
-        {
-            string infilepath = Path.Combine(exportFolderPath, filename);
-            BlockSchematic blockData;
-
-            string error = "";
-
-            blockData = BlockSchematic.LoadFromFile(infilepath, ref error);
-            if (blockData == null)
-            {
-                return TextCommandResult.Error(error);
-            }
-
-            PasteBlockData(blockData, startPos, origin);
-            return TextCommandResult.Success(filename + " imported.");
-        }
-
-
-        private TextCommandResult ExportArea(string filename, BlockPos start, BlockPos end, IServerPlayer sendToPlayer = null)
-        {
-            var blockdata = CopyArea(start, end);
-            var exported = blockdata.BlockIds.Count;
-            var exportedEntities = blockdata.Entities.Count;
-
-            var outfilepath = Path.Combine(exportFolderPath, filename);
-
-            if (sendToPlayer != null)
-            {
-                serverChannel.SendPacket(new SchematicJsonPacket() { Filename = filename, JsonCode = blockdata.ToJson() }, sendToPlayer);
-                return TextCommandResult.Success(exported + " blocks schematic sent to client.");
-            }
-            else
-            {
-                string error = blockdata.Save(outfilepath);
-                if (error != null)
-                {
-                    return TextCommandResult.Success("Failed exporting: " + error);
-                }
-                else
-                {
-                    return TextCommandResult.Success(exported + " blocks and "+ exportedEntities + " Entities exported");
-                }
-            }
-
-
-        }
-
-
-
-        public bool MayPlace(Block block, int quantityBlocks)
-        {
-            if (workspace.serverOverloadProtection)
-            {
-                if (quantityBlocks > 100 && block.LightHsv[2] > 5)
-                {
-                    Bad("Operation rejected. Server overload protection is on. Might kill the server to place that many light sources.");
-                    return false;
-                }
-
-                if (quantityBlocks > 200 * 200 * 200)
-                {
-                    Bad("Operation rejected. Server overload protection is on. Might kill the server to (potentially) place that many blocks.");
-                    return false;
-                }
-
-                ItemStack stack = new ItemStack(block);
-                if (quantityBlocks > 1000 && block.GetBlockMaterial(sapi.World.BlockAccessor, null, stack) == EnumBlockMaterial.Plant)
-                {
-                    Bad("Operation rejected. Server overload protection is on. Might kill the server when placing that many plants (might cause massive neighbour block updates if one plant is broken).");
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        public void Good(string message, params object[] args)
-        {
-            fromPlayer.SendMessage(0, string.Format(message, args), EnumChatType.CommandSuccess);
-        }
-
-        public void Bad(string message, params object[] args)
-        {
-            fromPlayer.SendMessage(0, string.Format(message, args), EnumChatType.CommandError);
-        }
-
-        public void SendPreviewOriginToClient(BlockPos origin, int dim)
-        {
-            serverChannel.SendPacket(new PreviewBlocksPacket()
-            {
-                pos = origin,
-                dimId = dim
-            }, fromPlayer);
+            player.SendMessage(0, string.Format(message, args), EnumChatType.CommandError);
         }
     }
 }

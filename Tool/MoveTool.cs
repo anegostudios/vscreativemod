@@ -1,142 +1,253 @@
 ﻿using System;
+using System.Collections.Generic;
+using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Server;
+using VSCreativeMod;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
-    public enum EnumMoveToolMode
-    {
-        MoveBlocks = 0,
-        MoveSelection = 1,
-    }
-
-
     public class MoveTool : ToolBase
     {
-        public virtual string Prefix { get { return "std.move"; } }
-        
+        public override bool ScrollEnabled => true;
 
-        public EnumMoveToolMode MoveRepeatMode
+        public EnumOrigin Origin
         {
-            get { return (EnumMoveToolMode)workspace.IntValues[Prefix + "Mode"]; }
-            set { workspace.IntValues[Prefix + "Mode"] = (int)value; }
+            get { return (EnumOrigin)workspace.IntValues["std.moveToolOrigin"]; }
+            set { workspace.IntValues["std.moveToolOrigin"] = (int)value; }
         }
 
-        public int Amount
+        public MoveTool()
         {
-            get { return workspace.IntValues[Prefix + "Amount"]; }
-            private set { workspace.IntValues[Prefix + "Amount"] = value; }
+            // keep for client side GetAvailableModes
         }
 
         public MoveTool(WorldEditWorkspace workspace, IBlockAccessorRevertable blockAccess) : base(workspace, blockAccess)
         {
-            if (!workspace.IntValues.ContainsKey(Prefix + "Mode")) MoveRepeatMode = EnumMoveToolMode.MoveBlocks;
-            if (!workspace.IntValues.ContainsKey(Prefix + "Amount")) Amount = 1;
+            if (!workspace.IntValues.ContainsKey("std.moveToolOrigin")) Origin = EnumOrigin.BottomCenter;
         }
-        
 
-
-        public override bool OnWorldEditCommand(WorldEdit worldEdit, CmdArgs args)
+        public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
-            string cmd = args.PopWord();
+            var player = (IServerPlayer)callerArgs.Caller.Player;
+            var args = callerArgs.RawArgs;
+            var cmd = args.PopWord();
             switch (cmd)
             {
-                case "tm":
-                    {
-                        EnumMoveToolMode mode = EnumMoveToolMode.MoveBlocks;
-
-                        if (args.Length > 0)
-                        {
-                            int index;
-                            int.TryParse(args[0], out index);
-                            if (Enum.IsDefined(typeof(EnumMoveToolMode), index))
-                            {
-                                mode = (EnumMoveToolMode)index;
-                            }
-                        }
-
-                        MoveRepeatMode = mode;
-                        worldEdit.Good(Lang.Get("Tool mode now set to {0}", mode));
-                        return true;
-                    }
-
-                case "am":
-                    {
-                        Amount = (int)args.PopInt(1);
-                        worldEdit.Good(Lang.Get("Amount set to {0}", Amount));
-                        return true;
-                    }
-
                 case "north":
                 case "east":
                 case "west":
                 case "south":
                 case "up":
                 case "down":
+                {
+                    BlockFacing facing = BlockFacing.FromCode(cmd);
+                    Move(facing.Normali);
+                    return true;
+                }
+                case "look":
+                {
+                    var lookVec = player.Entity.SidedPos.GetViewVector();
+                    var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
+                    Move(facing.Normali);
+                    return true;
+                }
+                case "imr":
+                    if (workspace.PreviewBlockData == null)
                     {
-                        BlockFacing facing = BlockFacing.FromCode(cmd);
-                        Handle(worldEdit, facing.Normali);
+                        WorldEdit.Bad(player, "Please select a area first and create a preview");
                         return true;
                     }
 
-                case "look":
+                    int angle = 90;
+
+                    if (args.Length > 0)
                     {
-                        var player = worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
-                        var lookVec = player.Entity.SidedPos.GetViewVector();
-                        var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
-                        Handle(worldEdit, facing.Normali);
+                        if (!int.TryParse(args[0], out angle))
+                        {
+                            WorldEdit.Bad(player, "Invalid Angle (not a number)");
+                            return true;
+                        }
+                    }
+
+                    if (angle < 0) angle += 360;
+
+                    if (angle != 0 && angle != 90 && angle != 180 && angle != 270)
+                    {
+                        WorldEdit.Bad(player, "Invalid Angle, allowed values are -270, -180, -90, 0, 90, 180 and 270");
                         return true;
                     }
+
+                    workspace.PreviewBlockData.TransformWhilePacked(worldEdit.sapi.World, EnumOrigin.BottomCenter, angle, null);
+                    workspace.ResendBlockHighlights();
+
+                    return true;
+                case "imo":
+                    Origin = EnumOrigin.BottomCenter;
+
+                    if (args.Length > 0)
+                    {
+                        int origin;
+                        int.TryParse(args[0], out origin);
+                        if (Enum.IsDefined(typeof(EnumOrigin), origin))
+                        {
+                            Origin = (EnumOrigin)origin;
+                        }
+                    }
+
+                    workspace.ResendBlockHighlights();
+                    WorldEdit.Good(player, "Paste origin " + Origin + " set.");
+                    return true;
+                case "preview":
+                {
+                    if (workspace.StartMarker == null || workspace.EndMarker == null) return true;
+
+                    workspace.PreviewBlockData = CopyArea(worldEdit.sapi, workspace.StartMarker, workspace.EndMarker);
+                    if (workspace.PreviewPos == null)
+                    {
+                        workspace.PreviewPos = workspace.StartMarker.Copy();
+                    }
+
+                    workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
+                    return true;
+                }
+                case "commit":
+                {
+                    if (MoveBlocks(worldEdit))
+                    {
+                        return true;
+                    }
+                    workspace.ResendBlockHighlights();
+                    return true;
+                }
             }
 
             return false;
         }
 
-
-        private void Handle(WorldEdit worldedit, Vec3i dir)
+        private bool MoveBlocks(WorldEdit worldEdit)
         {
-            Vec3i vec = dir * Amount;
+            if (workspace.PreviewBlockData == null || workspace.PreviewPos == null || workspace.StartMarker == null || workspace.EndMarker == null) return true;
 
-            switch (MoveRepeatMode)
-            {
-                case EnumMoveToolMode.MoveBlocks:
-                    worldedit.MoveArea(vec, workspace.StartMarker, workspace.EndMarker);
-                    workspace.ResendBlockHighlights(worldedit);
-                    break;
+            var startPos = workspace.PreviewBlockData.GetStartPos(workspace.PreviewPos, EnumOrigin.StartPos);
 
-                case EnumMoveToolMode.MoveSelection:
-                    workspace.StartMarker.Add(vec);
-                    workspace.EndMarker.Add(vec);
-                    workspace.revertableBlockAccess.StoreHistoryState(HistoryState.Empty());
-                    workspace.ResendBlockHighlights(worldedit);
-                    break;
-            }
+            workspace.revertableBlockAccess.BeginMultiEdit();
+            workspace.FillArea(null, workspace.StartMarker, workspace.EndMarker);
+
+            workspace.PreviewBlockData.Init(ba);
+            workspace.PreviewBlockData.Place(ba, worldEdit.sapi.World, startPos, EnumReplaceMode.ReplaceAll, WorldEdit.ReplaceMetaBlocks);
+
+            workspace.PreviewBlockData.PlaceDecors(ba, startPos);
+            ba.Commit();
+            workspace.PreviewBlockData.PlaceEntitiesAndBlockEntities(ba, worldEdit.sapi.World, startPos,
+                workspace.PreviewBlockData.BlockCodes, workspace.PreviewBlockData.ItemCodes, false, null, 0, null, WorldEdit.ReplaceMetaBlocks);
+            ba.CommitBlockEntityData();
+
+            workspace.PreviewPos = startPos.Copy();
+            workspace.StartMarker = startPos.Copy();
+            workspace.EndMarker = startPos.AddCopy(workspace.PreviewBlockData.SizeX, workspace.PreviewBlockData.SizeY, workspace.PreviewBlockData.SizeZ);
+            workspace.StartMarkerExact = workspace.StartMarker.ToVec3d().Add(0.5);
+            workspace.EndMarkerExact = workspace.StartMarkerExact.AddCopy(workspace.PreviewBlockData.SizeX, workspace.PreviewBlockData.SizeY, workspace.PreviewBlockData.SizeZ).Add(-1);
+
+
+            workspace.revertableBlockAccess.EndMultiEdit();
+            workspace.PreviewPos = null;
+            workspace.PreviewBlockData = null;
+
+            workspace.DestroyPreview();
+            return false;
         }
 
+        private void Move(Vec3i dir)
+        {
+            if (workspace.PreviewPos == null)
+            {
+                if (workspace.StartMarker == null) return;
+                workspace.PreviewPos = workspace.StartMarker.Copy();
+            }
 
+            var vec = dir * workspace.StepSize;
+
+            workspace.PreviewPos.Add(vec);
+            workspace.SendPreviewOriginToClient(workspace.PreviewPos, workspace.previewBlocks.subDimensionId);
+        }
 
         public override void OnInteractStart(WorldEdit worldEdit, BlockSelection blockSelection)
         {
-            if (blockSelection == null || workspace.StartMarker == null || workspace.EndMarker == null) return;
+            if (workspace.PreviewBlockData == null || workspace.PreviewPos == null || workspace.StartMarker == null || workspace.EndMarker == null) return;
 
-            BlockPos center = (workspace.StartMarker + workspace.EndMarker) / 2;
-            center.Y = Math.Min(workspace.StartMarker.Y, workspace.EndMarker.Y);
-
-            Vec3i offset = (blockSelection.Position - center).ToVec3i();
-            offset.Add(blockSelection.Face);
-            var amount = Amount;
-            Amount = 1;
-            Handle(worldEdit, offset);
-            Amount = amount;
+            MoveBlocks(worldEdit);
+            workspace.ResendBlockHighlights();
         }
 
-
-
-
-        public override Vec3i Size
+        public override void OnAttackStart(WorldEdit worldEdit, BlockSelection blockSelection)
         {
-            get { return new Vec3i(0, 0, 0); }
+            if (workspace.StartMarker == null || workspace.EndMarker == null) return;
+
+            if (workspace.PreviewPos == null)
+            {
+                var player = worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
+                workspace.PreviewPos = player.Entity.Pos.AsBlockPos;
+            }
+
+            var offset = (blockSelection.Position - workspace.PreviewPos).ToVec3i();
+
+            offset.Add(blockSelection.Face);
+
+            workspace.PreviewPos.Add(offset);
+
+            if (workspace.PreviewBlockData == null)
+            {
+                workspace.PreviewBlockData = CopyArea(worldEdit.sapi, workspace.StartMarker, workspace.EndMarker);
+                workspace.PreviewPos = workspace.PreviewBlockData.AdjustStartPos(workspace.PreviewPos, Origin);
+                workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
+            }
+            else
+            {
+                workspace.PreviewPos = workspace.PreviewBlockData.AdjustStartPos(workspace.PreviewPos, Origin);
+                workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
+            }
+        }
+
+        public override Vec3i Size => new(0, 0, 0);
+
+        private BlockSchematic CopyArea(ICoreServerAPI api, BlockPos start, BlockPos end)
+        {
+            BlockPos startPos = new BlockPos(Math.Min(start.X, end.X), Math.Min(start.Y, end.Y), Math.Min(start.Z, end.Z));
+            BlockSchematic blockdata = new BlockSchematic();
+            blockdata.AddArea(api.World, start, end);
+            blockdata.Pack(api.World, startPos);
+            return blockdata;
+        }
+
+        public override List<SkillItem> GetAvailableModes(ICoreClientAPI capi)
+        {
+            var move = EnumWeToolMode.Move.ToString();
+            var rotate = EnumWeToolMode.Rotate.ToString();
+            var multilineItems = new List<SkillItem>()
+            {
+                new()
+                {
+                    Name = Lang.Get(move),
+                    Code = new AssetLocation(move)
+                },
+                new()
+                {
+                    Texture = capi.Gui.LoadSvgWithPadding(new AssetLocation("textures/icons/worldedit/rotate.svg"), 48, 48, 5, ColorUtil.WhiteArgb),
+                    Name = Lang.Get(rotate),
+                    Code = new AssetLocation(rotate)
+                }
+            };
+            multilineItems[0].WithIcon(capi, "move");
+            return multilineItems;
+        }
+
+        public override void Unload(ICoreAPI api)
+        {
+            workspace.PreviewPos = null;
+            workspace.PreviewBlockData = null;
         }
     }
 }
