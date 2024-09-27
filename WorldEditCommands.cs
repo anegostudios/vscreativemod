@@ -155,10 +155,16 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .HandleWith(handleMgenCode)
                 .EndSub()
                 .BeginSub("import")
-                    .WithDesc("Import schematic by filename to select area")
+                    .WithDesc("Import schematic by filename to selected area")
                     .WithAlias("imp")
                     .WithArgs(parsers.Word("file name"), parsers.OptionalWord("origin mode"))
                     .HandleWith(handleImport)
+                .EndSub()
+                .BeginSub("importl")
+                    .WithDesc("Import large schematic by filename to selected area. This does not allow you to revert it but does speed up import time by a lot. If you select the import tool and set the Replace Mode: Replace all no air, it will be even faster")
+                    .WithAlias("impl")
+                    .WithArgs(parsers.Word("file name"), parsers.OptionalWord("origin mode"))
+                    .HandleWith(handleImportLarge)
                 .EndSub()
                 .BeginSub("resolve-meta")
                     .WithDesc("Toggle resolve meta blocks mode during Worldedit import. Turn it off to spawn structures as they are. For example, in this mode, instead of traders, their meta spawners will spawn")
@@ -901,8 +907,31 @@ namespace Vintagestory.ServerMods.WorldEdit
                 catch { }
             }
 
-            return workspace.ImportArea(filename, workspace.StartMarker, origin);
+            return workspace.ImportArea(filename, workspace.StartMarker, origin, false);
         }
+        private TextCommandResult handleImportLarge(TextCommandCallingArgs args)
+        {
+            if (workspace.StartMarker == null)
+            {
+                return TextCommandResult.Error("Please mark a start position");
+            }
+
+            string filename = (string)args[0];
+
+            EnumOrigin origin = EnumOrigin.StartPos;
+
+            if (!args.Parsers[1].IsMissing)
+            {
+                try
+                {
+                    origin = (EnumOrigin)Enum.Parse(typeof(EnumOrigin), (string)args[1]);
+                }
+                catch { }
+            }
+
+            return workspace.ImportArea(filename, workspace.StartMarker, origin, true);
+        }
+
 
         private TextCommandResult handleMgenCode(TextCommandCallingArgs args)
         {

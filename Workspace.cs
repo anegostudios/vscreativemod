@@ -777,27 +777,43 @@ namespace Vintagestory.ServerMods.WorldEdit
             return blockdata;
         }
 
-        public void PasteBlockData(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin)
+        public void PasteBlockData(BlockSchematic blockData, BlockPos startPos, EnumOrigin origin, IBlockAccessor blockAccessor = null)
         {
             BlockPos originPos = blockData.GetStartPos(startPos, origin);
 
             EnumAxis? axis = null;
             if (ImportFlipped) axis = EnumAxis.Y;
 
-            BlockSchematic rotated = blockData.ClonePacked();
+            if (blockAccessor == null)
+            {
+                blockAccessor = revertableBlockAccess;
+            }
+
+            var rotated = blockData.ClonePacked();
             rotated.TransformWhilePacked(sapi.World, origin, ImportAngle, axis);
 
-            rotated.Init(revertableBlockAccess);
-            rotated.Place(revertableBlockAccess, sapi.World, originPos, EnumReplaceMode.ReplaceAll, WorldEdit.ReplaceMetaBlocks);
-            rotated.PlaceDecors(revertableBlockAccess, originPos);
-            revertableBlockAccess.Commit();
+            rotated.Init(blockAccessor);
+            var enumReplaceMode = EnumReplaceMode.ReplaceAll;
 
-            blockData.PlaceEntitiesAndBlockEntities(revertableBlockAccess, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
+            if (ToolInstance is ImportTool importTool)
+            {
+               enumReplaceMode = importTool.ReplaceMode;
+            }
 
-            revertableBlockAccess.CommitBlockEntityData();
+            rotated.Place(blockAccessor, sapi.World, originPos, enumReplaceMode, WorldEdit.ReplaceMetaBlocks);
+            rotated.PlaceDecors(blockAccessor, originPos);
+
+            if (blockAccessor is IBlockAccessorRevertable revertable)
+            {
+                revertable.Commit();
+
+                blockData.PlaceEntitiesAndBlockEntities(revertable, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
+
+                revertable.CommitBlockEntityData();
+            }
         }
 
-        public TextCommandResult ImportArea(string filename, BlockPos startPos, EnumOrigin origin)
+        public TextCommandResult ImportArea(string filename, BlockPos startPos, EnumOrigin origin, bool isLarge)
         {
             string infilepath = Path.Combine(WorldEdit.ExportFolderPath, filename);
             BlockSchematic blockData;
@@ -810,7 +826,13 @@ namespace Vintagestory.ServerMods.WorldEdit
                 return TextCommandResult.Error(error);
             }
 
-            PasteBlockData(blockData, startPos, origin);
+            if (blockData.SizeX >= 1024 || blockData.SizeY >= 1024 || blockData.SizeZ >= 1024)
+            {
+                return TextCommandResult.Error("Can not load schematics larger than 1024x1024x1024");
+            }
+
+            var worldBlockAccessor = isLarge ? sapi.World.BlockAccessor : null;
+            PasteBlockData(blockData, startPos, origin, worldBlockAccessor);
             return TextCommandResult.Success(filename + " imported.");
         }
 

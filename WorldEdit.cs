@@ -323,12 +323,12 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
-            var stagedDecorPositions = ba.StagedBlocks.Where(b => b.Value.Decor != null).ToArray();
+            var stagedDecorPositions = ba.StagedBlocks.Where(b => b.Value.Decors != null).ToArray();
             foreach (var pos in stagedDecorPositions)
             {
                 if (!selection.Contains(new Vec3i(pos.Key.X, pos.Key.Y, pos.Key.Z)))
                 {
-                    ba.StagedBlocks[pos.Key].Decor = null;
+                    ba.StagedBlocks[pos.Key].Decors = null;
                 }
             }
         }

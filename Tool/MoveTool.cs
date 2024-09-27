@@ -43,24 +43,30 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "up":
                 case "down":
                 {
+                    if (CreatePreview(worldEdit, player))
+                    {
+                        return true;
+                    }
                     BlockFacing facing = BlockFacing.FromCode(cmd);
                     Move(facing.Normali);
                     return true;
                 }
                 case "look":
                 {
+                    if (CreatePreview(worldEdit, player))
+                    {
+                        return true;
+                    }
                     var lookVec = player.Entity.SidedPos.GetViewVector();
                     var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     Move(facing.Normali);
                     return true;
                 }
                 case "imr":
-                    if (workspace.PreviewBlockData == null)
+                    if (CreatePreview(worldEdit, player))
                     {
-                        WorldEdit.Bad(player, "Please select a area first and create a preview");
                         return true;
                     }
-
                     int angle = 90;
 
                     if (args.Length > 0)
@@ -102,15 +108,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return true;
                 case "preview":
                 {
-                    if (workspace.StartMarker == null || workspace.EndMarker == null) return true;
-
-                    workspace.PreviewBlockData = CopyArea(worldEdit.sapi, workspace.StartMarker, workspace.EndMarker);
-                    if (workspace.PreviewPos == null)
-                    {
-                        workspace.PreviewPos = workspace.StartMarker.Copy();
-                    }
-
-                    workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
+                    CreatePreview(worldEdit, player);
                     return true;
                 }
                 case "commit":
@@ -124,6 +122,25 @@ namespace Vintagestory.ServerMods.WorldEdit
                 }
             }
 
+            return false;
+        }
+
+        private bool CreatePreview(WorldEdit worldEdit, IServerPlayer player)
+        {
+            if (workspace.PreviewBlockData != null) return false;
+            if (workspace.StartMarker == null || workspace.EndMarker == null)
+            {
+                WorldEdit.Bad(player, "Please select a area first and create a preview");
+                return true;
+            }
+
+            workspace.PreviewBlockData = CopyArea(worldEdit.sapi, workspace.StartMarker, workspace.EndMarker);
+            if (workspace.PreviewPos == null)
+            {
+                workspace.PreviewPos = workspace.StartMarker.Copy();
+            }
+
+            workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
             return false;
         }
 
