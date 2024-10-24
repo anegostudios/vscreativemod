@@ -807,8 +807,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 revertable.Commit();
 
-                blockData.PlaceEntitiesAndBlockEntities(revertable, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes);
-
+                blockData.PlaceEntitiesAndBlockEntities(revertable, sapi.World, originPos, blockData.BlockCodes, blockData.ItemCodes,false, null, 0 , null, WorldEdit.ReplaceMetaBlocks);
                 revertable.CommitBlockEntityData();
             }
         }
