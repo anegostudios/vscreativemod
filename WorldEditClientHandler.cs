@@ -92,7 +92,7 @@ namespace Vintagestory.ServerMods.WorldEdit
     public class WorldEditClientHandler
     {
         public ICoreClientAPI capi;
-
+        private bool shouldOpenGui;
         public GuiJsonDialog toolBarDialog;
         public GuiJsonDialog controlsDialog;
         public GuiJsonDialog toolOptionsDialog;
@@ -360,62 +360,32 @@ namespace Vintagestory.ServerMods.WorldEdit
             ownWorkspace = workspace;
             ownWorkspace.ToolInstance = GetToolInstance(workspace.ToolName);
 
-            isComposing = true;
-            if (toolBarDialog != null && toolBarDialog.IsOpened())
+            // update GUI when switching tools
+            if (shouldOpenGui && toolBarDialog?.IsOpened() == true)
             {
+                isComposing = true;
                 toolBarDialog.Recompose();
+
+                if (toolOptionsDialog?.IsOpened() == true)
+                {
+                    toolOptionsDialog.Recompose();
+                    toolOptionsDialog.UnfocusElements();
+                }
+
+                if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled &&
+                    toolBarDialog?.IsOpened() == true)
+                {
+                    OpenToolOptionsDialog("" + ownWorkspace.ToolName);
+                }
+
+                isComposing = false;
+                return;
             }
-
-            if (toolOptionsDialog != null && toolOptionsDialog.IsOpened())
-            {
-                toolOptionsDialog.Recompose();
-                toolOptionsDialog.UnfocusElements();
-            }
-
-            if (ownWorkspace != null && ownWorkspace.ToolName != null && ownWorkspace.ToolName.Length > 0 && ownWorkspace.ToolsEnabled &&
-                toolBarDialog?.IsOpened() == true)
-            {
-                OpenToolOptionsDialog("" + ownWorkspace.ToolName);
-            }
-
-
-            isComposing = false;
-        }
-
-        private ToolBase GetToolInstance(string workspaceToolName)
-        {
-            if (workspaceToolName == null) return null;
-            if (_toolInstances.TryGetValue(workspaceToolName, out var instance))
-            {
-                return instance;
-            }
-
-            _toolInstances[workspaceToolName] = Activator.CreateInstance(ToolRegistry.ToolTypes[ownWorkspace.ToolName]) as ToolBase;
-            return _toolInstances[workspaceToolName];
-        }
-
-        private bool OnHotkeyWorldEdit(KeyCombination t1)
-        {
-            TriggerWorldEditDialog();
-            return true;
-        }
-
-        private TextCommandResult CmdEditClient(TextCommandCallingArgs args)
-        {
-            TriggerWorldEditDialog();
-            return TextCommandResult.Success();
-        }
-
-        private void TriggerWorldEditDialog()
-        {
-            if (capi.World.Player.WorldData.CurrentGameMode != EnumGameMode.Creative) return;
 
             try
             {
-                if (toolBarDialog == null || !toolBarDialog.IsOpened())
+                if (shouldOpenGui)
                 {
-                    clientChannel.SendPacket(new RequestWorkSpacePacket());
-
                     if (scroll == null)
                     {
                         scroll = new HudWorldEditInputCapture(capi, this);
@@ -431,12 +401,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     capi.Input.SetHotKeyHandler("worldeditcopy", OnHotkeyWorldEditCopy);
                     capi.Input.SetHotKeyHandler("worldeditundo", OnHotkeyWorldEditUndo);
 
-
                     if (!scroll.IsOpened())
                     {
                         scroll.TryOpen();
                     }
-
 
                     if (toolBarsettings == null || capi.Settings.Bool.Get("developerMode", false))
                     {
@@ -449,6 +417,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     toolBarDialog = new GuiJsonDialog(toolBarsettings, capi, false);
                     toolBarDialog.TryOpen(false);
                     toolBarDialog.OnClosed += () => {
+                        shouldOpenGui = false;
                         toolOptionsDialog?.TryClose();
                         settingsDialog?.TryClose();
                         controlsDialog?.TryClose();
@@ -489,6 +458,49 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 capi.World.Logger.Error("Unable to load json dialogs:");
                 capi.World.Logger.Error(e);
+            }
+        }
+
+        private ToolBase GetToolInstance(string workspaceToolName)
+        {
+            if (workspaceToolName == null) return null;
+            if (_toolInstances.TryGetValue(workspaceToolName, out var instance))
+            {
+                return instance;
+            }
+
+            _toolInstances[workspaceToolName] = Activator.CreateInstance(ToolRegistry.ToolTypes[ownWorkspace.ToolName]) as ToolBase;
+            return _toolInstances[workspaceToolName];
+        }
+
+        private bool OnHotkeyWorldEdit(KeyCombination t1)
+        {
+            TriggerWorldEditDialog();
+            return true;
+        }
+
+        private TextCommandResult CmdEditClient(TextCommandCallingArgs args)
+        {
+            TriggerWorldEditDialog();
+            return TextCommandResult.Success();
+        }
+
+        private void TriggerWorldEditDialog()
+        {
+            if (capi.World.Player.WorldData.CurrentGameMode != EnumGameMode.Creative) return;
+
+            if (toolBarDialog == null || !toolBarDialog.IsOpened())
+            {
+                clientChannel.SendPacket(new RequestWorkSpacePacket());
+                shouldOpenGui = true;
+            }
+            else
+            {
+                shouldOpenGui = false;
+                toolBarDialog?.TryClose();
+                toolOptionsDialog?.TryClose();
+                settingsDialog?.TryClose();
+                controlsDialog?.TryClose();
             }
         }
 

@@ -74,7 +74,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (!workspace.IntValues.ContainsKey("std.importReplaceMode")) ReplaceMode = EnumReplaceMode.Replaceable;
             if (!workspace.IntValues.ContainsKey("std.pasteToolRandomRotate")) RandomRotate = false;
             if (!workspace.IntValues.ContainsKey("std.updatePreviewPos")) UpdatePreviewPos = true;
-            if (!workspace.IntValues.ContainsKey("std.previewAtPlayer")) PreviewAtPlayer = true;
+            if (!workspace.IntValues.ContainsKey("std.previewAtPlayer")) PreviewAtPlayer = false;
             if (workspace.clipboardBlockData != null) workspace.PreviewBlockData = workspace.clipboardBlockData;
             _rand = new();
         }
