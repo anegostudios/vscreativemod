@@ -88,10 +88,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private void Move(Vec3i dir)
         {
-            if (workspace.PreviewPos == null)
+            if (workspace.PreviewPos == null || workspace.PreviewBlockData == null)
             {
-                if (workspace.StartMarker == null) return;
-                workspace.PreviewPos = workspace.StartMarker.Copy();
+                return;
             }
 
             var vec = dir * workspace.StepSize;
@@ -129,7 +128,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                         workspace.PreviewBlockData = workspace.clipboardBlockData;
                         if (workspace.PreviewPos == null)
                         {
-                            workspace.PreviewPos = player.Entity.Pos.AsBlockPos;
+                            if (!PreviewAtPlayer && workspace.StartMarker != null)
+                            {
+                                workspace.PreviewPos = workspace.StartMarker.Copy();
+                            }
+                            else
+                            {
+                                workspace.PreviewPos = workspace.world.PlayerByUid(workspace.PlayerUID).Entity.Pos.AsBlockPos;
+                            }
                         }
 
                         WorldEdit.Good(player, "Ok, using copied blockdata");
@@ -151,7 +157,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                     workspace.PreviewBlockData = BlockSchematic.LoadFromFile(filepath, ref error);
                     if (workspace.PreviewPos == null)
                     {
-                        workspace.PreviewPos = (worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID).Entity.Pos.AsBlockPos);
+                        if (!PreviewAtPlayer && workspace.StartMarker != null)
+                        {
+                            workspace.PreviewPos = workspace.StartMarker.Copy();
+                        }
+                        else
+                        {
+                            workspace.PreviewPos = worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID).Entity.Pos.AsBlockPos;
+                        }
                     }
 
                     workspace.CreatePreview(workspace.PreviewBlockData, workspace.PreviewPos);
