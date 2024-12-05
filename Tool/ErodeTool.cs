@@ -215,16 +215,16 @@ namespace Vintagestory.ServerMods.WorldEdit
                         for (int lz = -blurRad; lz <= blurRad; lz++)
                         {
                             dpos = pos.AddCopy(dx + lx, 0, dz + lz);
-                            while (dpos.Y < mapSizeY && blockAccessor.GetBlockId(dpos.X, dpos.Y, dpos.Z) != 0) dpos.Up();
-                            while (dpos.Y > 0 && blockAccessor.GetBlockId(dpos.X, dpos.Y, dpos.Z) == 0) dpos.Down();
+                            while (dpos.Y < mapSizeY && blockAccessor.GetBlockId(dpos) != 0) dpos.Up();
+                            while (dpos.Y > 0 && blockAccessor.GetBlockId(dpos) == 0) dpos.Down();
 
                             avgHeight += dpos.Y * kernel[lx + blurRad, lz + blurRad];
                         }
                     }
 
                     dpos = pos.AddCopy(dx, 0, dz);
-                    while (dpos.Y < mapSizeY && blockAccessor.GetBlockId(dpos.X, dpos.Y, dpos.Z) != 0) dpos.Up();
-                    while (dpos.Y > 0 && (prevBlock = blockAccessor.GetBlock(dpos.X, dpos.Y, dpos.Z)).BlockId == 0) dpos.Down();
+                    while (dpos.Y < mapSizeY && blockAccessor.GetBlockId(dpos) != 0) dpos.Up();
+                    while (dpos.Y > 0 && (prevBlock = blockAccessor.GetBlock(dpos)).BlockId == 0) dpos.Down();
 
                     if (Math.Abs(dpos.Y - avgHeight) < 0.36) continue;
 

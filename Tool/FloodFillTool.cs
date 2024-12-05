@@ -217,7 +217,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (fillable)
                         {
-                            bfsQueue.Enqueue(new Vec4i(curPos.X, curPos.Y, curPos.Z, bpos.W + 1));
+                            bfsQueue.Enqueue(new Vec4i(curPos, bpos.W + 1));
                             fillablePositions.Add(curPos.Copy());
                         }
 

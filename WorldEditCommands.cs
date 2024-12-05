@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.Text;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.CommandAbbr;
 using Vintagestory.API.Common.Entities;
@@ -153,6 +154,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithDesc("Generate multiblock code of selected area")
                     .WithAlias("gmc")
                     .HandleWith(handleMgenCode)
+                .EndSub()
+                .BeginSub("generate-claim-code")
+                    .WithDesc("Generate CustomLandClaims code of selected area with the players position as the reference. So put your player on the start position (green marker when entire schematic is selected via magic select mode) of the schematic.")
+                    .WithAlias("gcc")
+                    .HandleWith(handleClaimCode)
                 .EndSub()
                 .BeginSub("import")
                     .WithDesc("Import schematic by filename to selected area")
@@ -932,7 +938,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             return workspace.ImportArea(filename, workspace.StartMarker, origin, true);
         }
 
-
         private TextCommandResult handleMgenCode(TextCommandCallingArgs args)
         {
             if (workspace.StartMarker == null || workspace.EndMarker == null)
@@ -946,6 +951,25 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
 
             return GenMarkedMultiblockCode(args.Caller.Player as IServerPlayer);
+        }
+
+        private TextCommandResult handleClaimCode(TextCommandCallingArgs args)
+        {
+            var pos = args.Caller.Player.Entity.Pos.AsBlockPos;
+            if (workspace.StartMarker == null || workspace.EndMarker == null)
+            {
+                return TextCommandResult.Error("Please mark start and end position");
+            }
+
+            var start = workspace.StartMarker - pos;
+            var end = workspace.EndMarker - pos;
+            var sb = new StringBuilder();
+            sb.AppendLine("CustomLandClaims: [");
+            sb.AppendLine($"\t\t\t{{ x1: {start.X}, y1: {start.Y}, z1: {start.Z}, x2: {end.X}, y2: {end.Y}, z2: {end.Z} }}");
+            sb.AppendLine("\t],");
+
+            sapi.World.Logger.Notification("CustomLandClaims centered around player position: {0}:\n{1}", pos, sb.ToString());
+            return TextCommandResult.Success("Json code written to server-main.log");
         }
 
         private TextCommandResult handleRelightMarked(TextCommandCallingArgs args)
@@ -988,7 +1012,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 BlockPos st = workspace.StartMarkerExact.AsBlockPos;
                 BlockPos en = workspace.EndMarkerExact.AsBlockPos;
-                serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we {7} {6}", st.X, st.Y, st.Z, en.X, en.Y, en.Z, args[0], sendToClient ? "expc" : "exp")  }, player);
+                serverChannel.SendPacket(new CopyToClipboardPacket() { Text = string.Format("/we mark ={0} ={1} ={2} ={3} ={4} ={5}\n/we {7} {6}", st.X, st.InternalY, st.Z, en.X, en.InternalY, en.Z, args[0], sendToClient ? "expc" : "exp")  }, player);
             }
 
             return workspace.ExportArea((string)args[0], workspace.StartMarker, workspace.EndMarker, sendToClient ? player : null);

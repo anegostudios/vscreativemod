@@ -83,14 +83,14 @@ namespace Vintagestory.ServerMods.WorldEdit
                     var tmpStart = workspace.StartMarker.Copy();
                     workspace.StartMarkerExact = new Vec3d(
                         Math.Min(tmpStart.X, tmpEnd.X),
-                        Math.Min(tmpStart.Y, tmpEnd.Y),
+                        Math.Min(tmpStart.InternalY, tmpEnd.InternalY),
                         Math.Min(tmpStart.Z, tmpEnd.Z)
                     );
                     workspace.StartMarkerExact.Add(0.5);
 
                     workspace.EndMarkerExact = new Vec3d(
                         Math.Max(tmpStart.X, tmpEnd.X),
-                        Math.Max(tmpStart.Y, tmpEnd.Y),
+                        Math.Max(tmpStart.InternalY, tmpEnd.InternalY),
                         Math.Max(tmpStart.Z, tmpEnd.Z)
                     );
                     workspace.EndMarkerExact.Add(-0.5);

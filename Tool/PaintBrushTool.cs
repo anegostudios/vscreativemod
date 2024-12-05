@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 
 namespace Vintagestory.ServerMods.WorldEdit
 {
@@ -423,7 +424,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         public virtual void PerformBrushAction(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack) {
             if (BrushDim1 <= 0) return;
 
-            Block selectedBlock = blockSel.DidOffset ? ba.GetBlock(blockSel.Position.AddCopy(blockSel.Face.Opposite)) : ba.GetBlock(blockSel.Position);
+            Block selectedBlock = blockSel.DidOffset ? ba.GetBlockOnSide(blockSel.Position, blockSel.Face.Opposite) : ba.GetBlock(blockSel.Position);
 
             int selectedBlockId = selectedBlock.Id;
 
@@ -501,7 +502,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public bool isAir(IBlockAccessor blockAccessor, BlockPos pos, int dy = 0)
         {
-            return blockAccessor.GetBlock(pos.X, pos.Y + dy, pos.Z).Id == 0;
+            return blockAccessor.GetBlockAbove(pos, dy).Id == 0;
         }
 
         public override EnumHighlightShape GetBlockHighlightShape()
