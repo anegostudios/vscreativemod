@@ -44,7 +44,8 @@ namespace Vintagestory.ServerMods.WorldEdit
         public override void OnBreak(WorldEdit worldEdit, BlockSelection blockSel, ref EnumHandling handling)
         {
             handling = EnumHandling.PreventDefault;
-            GrowShrink(worldEdit, 0, blockSel, null, true);
+            var oldBlockId = worldEdit.sapi.World.BlockAccessor.GetBlockId( blockSel.Position);
+            GrowShrink(worldEdit, oldBlockId, blockSel, null, true);
         }
 
         public override void OnBuild(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack)
@@ -54,6 +55,9 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public bool GrowShrink(WorldEdit worldEdit, int oldBlockId, BlockSelection blockSel, ItemStack withItemStack, bool shrink = false)
         {
+            worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
+            ba.SetHistoryStateBlock(blockSel.Position.X, blockSel.Position.Y, blockSel.Position.Z, oldBlockId, ba.GetStagedBlockId(blockSel.Position));
+
             if (BrushRadius == 0) return false;
 
             var blockToPlace = shrink ? ba.GetBlock(0) : withItemStack.Block;

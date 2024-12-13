@@ -64,8 +64,7 @@ using Vintagestory.API.Config;
 					snowAccum: ""false"",
 					colorAccurateWorldmap: ""true"",
 					temporalRifts: ""off"",
-                    loreContent: ""false"",
-                    allowTimeswitch: ""true"",
+                    loreContent: ""false""
 			    }
 		    }
 	    ],

@@ -144,7 +144,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 sapi.Server.SetMiniDimension(previewBlocks, DimensionId);
             }
             previewBlocks.SetSubDimensionId(DimensionId);
-            previewBlocks.SetSelectionTrackingSubId_Server(DimensionId);
+            previewBlocks.BlocksPreviewSubDimension_Server = DimensionId;
         }
 
         private void BlockAccessor_OnRestoreHistoryState(HistoryState obj, int dir)
@@ -894,7 +894,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 previewBlocks.CurrentPos.SetPos(originPos);
             }
             previewBlocks.SetSubDimensionId(DimensionId);
-            previewBlocks.SetSelectionTrackingSubId_Server(DimensionId);
+            previewBlocks.BlocksPreviewSubDimension_Server = DimensionId;
 
             originPos.Sub(startPos);
             originPos.SetDimension(Dimensions.MiniDimensions);

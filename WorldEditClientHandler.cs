@@ -349,7 +349,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             if (msg.dimId >= 0)
             {
                 IMiniDimension dim = capi.World.GetOrCreateDimension(msg.dimId, msg.pos.ToVec3d());
-                dim.ClearChunks();
                 dim.selectionTrackingOriginalPos = msg.pos;
                 dim.TrackSelection = msg.TrackSelection;
             }
@@ -526,6 +525,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     return ownWorkspace?.Rsp == true ? "1" : "0";
                 case "std.stepSize":
                     return ownWorkspace?.StepSize.ToString() ?? "1";
+                case "std.constrain":
+                    return ownWorkspace?.WorldEditConstraint.ToString() ?? "None";
             }
 
             return "";
@@ -579,6 +580,11 @@ namespace Vintagestory.ServerMods.WorldEdit
                         }
                     }
 
+                    break;
+                }
+                case "std.constrain":
+                {
+                    capi.SendChatMessage("/we constrain " + newValue.ToLowerInvariant());
                     break;
                 }
             }

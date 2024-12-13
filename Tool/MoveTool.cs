@@ -111,6 +111,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                     CreatePreview(worldEdit, player);
                     return true;
                 }
+                case "apply":
+                case "place":
                 case "commit":
                 {
                     if (MoveBlocks(worldEdit))
@@ -146,6 +148,13 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private bool MoveBlocks(WorldEdit worldEdit)
         {
+            if (workspace.WorldEditConstraint == EnumWorldEditConstraint.Selection)
+            {
+                var player = worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
+                (player as IServerPlayer)?.SendMessage(GlobalConstants.GeneralChatGroup, "You can not use the move tool while the worldedit constain is enabled", EnumChatType.OthersMessage);
+                return true;
+            }
+
             if (workspace.PreviewBlockData == null || workspace.PreviewPos == null || workspace.StartMarker == null || workspace.EndMarker == null) return true;
 
             var startPos = workspace.PreviewBlockData.GetStartPos(workspace.PreviewPos, EnumOrigin.StartPos);

@@ -28,7 +28,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .HandleWith(onToolCommand)
                 .RequiresPrivilege("worldedit")
                 .WithPreCondition(loadWorkSpace)
-                .WithDesc("Creative mode world editing tools")
+                .WithDesc("Creative mode world editing tools.<br> If you want to enable the old commands you can do so with <a href=\"chattype:///worldconfigcreate bool legacywecommands true\">/worldconfigcreate bool legacywecommands true</a>")
                 .BeginSub("import-rotation")
                     .WithDesc("Set data import angle")
                     .WithAlias("impr")
@@ -174,7 +174,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                 .EndSub()
                 .BeginSub("resolve-meta")
                     .WithDesc("Toggle resolve meta blocks mode during Worldedit import. Turn it off to spawn structures as they are. For example, in this mode, instead of traders, their meta spawners will spawn")
-                    .WithAlias("impres").WithAlias("rm")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleToggleImpres)
                 .EndSub()
@@ -200,9 +199,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1))
                     .HandleWith(handleResize)
                 .EndSub()
-                .BeginSubs("gn", "ge", "gs", "gw", "gu", "gd", "gl")
+                .BeginSub("grow")
+                    .WithAlias("g")
                     .WithDesc("Grow selection in given direction (gl for look direction)")
-                    .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
+                    .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
                     .HandleWith(handleGrowSelection)
                 .EndSub()
                 .BeginSub("rotate")
@@ -248,11 +248,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithDesc("Shift current selection by given amount (does not move blocks, only the selection)")
                     .WithArgs(parsers.Word("direction", new string[] { "north", "n", "z", "-x", "l (for look direction)" }), parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
                     .HandleWith(handleShiftSelection)
-                .EndSub()
-                .BeginSub("smby")
-                    .WithDesc("Shift current selection by given amount")
-                    .WithArgs(parsers.IntDirection("direction"))
-                    .HandleWith(handleShiftSelectionBy)
                 .EndSub()
                 .BeginSub("clear")
                     .WithAlias("cs")
@@ -325,18 +320,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .WithArgs(parsers.Int("amount"))
                     .HandleWith(handleStep)
                 .EndSub()
-                .BeginSub("tool-rsp")
-                    .WithDesc("Enable disable the right setting panel")
-                    .WithAlias("rsp")
-                    .WithArgs(parsers.Bool("Mode"))
-                    .HandleWith(handleRsp)
-                .EndSub()
-                .BeginSub("tool-axislock")
-                    .WithDesc("Switch the axis lock for scroll wheel move and selection actions")
-                    .WithAlias("tal")
-                    .WithArgs(parsers.Int("Mode"))
-                    .HandleWith(handleTal)
-                .EndSub()
                 .Validate()
             ;
 
@@ -344,6 +327,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 sapi.ChatCommands
                     .GetOrCreate("we")
+                    .BeginSub("resolve-meta").WithAlias("impres").WithAlias("rm")
                     .BeginSub("copy").WithAlias("mcopy").EndSub()
                     .BeginSub("scp").WithAlias("mposcopy").EndSub()
                     .BeginSub("paste").WithAlias("mpaste").EndSub()
@@ -375,11 +359,20 @@ namespace Vintagestory.ServerMods.WorldEdit
                         .WithArgs(parsers.OptionalInt("amount", 1))
                         .HandleWith(handleMoveSelectionShorthand)
                     .EndSub()
-
                     .BeginSubs("smn", "sme", "sms", "sms", "smw", "smu", "smd")
                         .WithDesc("Shift current selection in given direction")
                         .WithArgs(parsers.OptionalInt("amount", 1))
                         .HandleWith(handleShiftSelectionShorthand)
+                    .EndSub()
+                    .BeginSubs("gn", "ge", "gs", "gw", "gu", "gd", "gl")
+                        .WithDesc("Grow selection in given direction (gl for look direction)")
+                        .WithArgs(parsers.OptionalInt("amount", 1), parsers.OptionalBool("quiet"))
+                        .HandleWith(handleGrowSelectionShorthand)
+                    .EndSub()
+                    .BeginSub("smby")
+                        .WithDesc("Shift current selection by given amount")
+                        .WithArgs(parsers.IntDirection("direction"))
+                        .HandleWith(handleShiftSelectionBy)
                     .EndSub()
                     ;
             }
@@ -429,6 +422,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult handleConstrain(TextCommandCallingArgs args)
         {
+            if (args.Parsers[0].IsMissing)
+            {
+                return TextCommandResult.Success("Worldedit cosntrain mode " + (workspace.WorldEditConstraint == EnumWorldEditConstraint.Selection ? "enabled" : "disabled"));
+            }
             workspace.WorldEditConstraint = (string)args[0] == "selection" ? EnumWorldEditConstraint.Selection : EnumWorldEditConstraint.None;
             return TextCommandResult.Success("Constraint " + workspace.WorldEditConstraint + " set.");
         }
@@ -713,6 +710,15 @@ namespace Vintagestory.ServerMods.WorldEdit
             return workspace.HandleShiftCommand(BlockFacing.FromFirstLetter(dirchar).Normali.Clone() * amount);
         }
 
+        private TextCommandResult handleGrowSelectionShorthand(TextCommandCallingArgs args)
+        {
+            var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
+            var facing = blockFacingFromArg(""+dirchar, args);
+            var quiet = !args.Parsers[1].IsMissing && (bool)args[1];
+
+            return workspace.ModifyMarker(facing, (int)args[0], quiet);
+        }
+
         private TextCommandResult handleMoveSelectionBy(TextCommandCallingArgs args)
         {
             return workspace.HandleMoveCommand((Vec3i)args[0]);
@@ -839,11 +845,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         private TextCommandResult handleGrowSelection(TextCommandCallingArgs args)
         {
-            var dirchar = args.SubCmdCode[args.SubCmdCode.Length - 1];
-            var facing = blockFacingFromArg(""+dirchar, args);
-            var quiet = !args.Parsers[1].IsMissing && (bool)args[1];
+            var direction = (string)args[0];
+            var facing = blockFacingFromArg(direction, args);
 
-            return workspace.ModifyMarker(facing, (int)args[0], quiet);
+            var quiet = !args.Parsers[2].IsMissing && (bool)args[2];
+
+            return workspace.ModifyMarker(facing, (int)args[1], quiet);
         }
 
         private TextCommandResult handleMark(TextCommandCallingArgs args)

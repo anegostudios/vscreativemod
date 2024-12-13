@@ -83,11 +83,11 @@ public class HudWorldEditInputCapture : HudElement
                 }
 
                 case EnumWeToolMode.MoveNear when _handler?.ownWorkspace?.ToolInstance is SelectTool:
-                    capi.SendChatMessage($"/we g{blockFacing.Opposite.Code[0]} {-1*amount} true");
+                    capi.SendChatMessage($"/we g {blockFacing.Opposite.Code[0]} {-1*amount} true");
                     args.SetHandled();
                     break;
                 case EnumWeToolMode.MoveFar when _handler?.ownWorkspace?.ToolInstance is SelectTool:
-                    capi.SendChatMessage($"/we g{facing} {amount} true");
+                    capi.SendChatMessage($"/we g {facing} {amount} true");
                     args.SetHandled();
                     break;
                 case EnumWeToolMode.Rotate:

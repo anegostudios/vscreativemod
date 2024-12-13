@@ -416,7 +416,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         {
             if (PreviewPos == null)
             {
-                if (StartMarker == null || StartMarker == null)
+                if (StartMarker == null || EndMarker == null)
                     return TextCommandResult.Success("You need to have at least an active selection");
                 PreviewPos = StartMarker.Copy();
                 PreviewBlockData = CopyArea(StartMarker, EndMarker);

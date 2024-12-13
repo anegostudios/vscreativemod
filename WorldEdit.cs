@@ -384,8 +384,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
         }
 
-        public static bool
-            CanUseWorldEdit(IServerPlayer player, bool showError = false)
+        public static bool CanUseWorldEdit(IServerPlayer player, bool showError = false)
         {
             if (player.WorldData.CurrentGameMode != EnumGameMode.Creative)
             {

@@ -98,6 +98,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             workspace.PreviewPos.Add(vec);
             workspace.SendPreviewOriginToClient(workspace.PreviewPos, workspace.previewBlocks.subDimensionId);
         }
+
         public override bool OnWorldEditCommand(WorldEdit worldEdit, TextCommandCallingArgs callerArgs)
         {
             var player = (IServerPlayer)callerArgs.Caller.Player;
@@ -289,6 +290,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
 
                     return true;
+                case "apply":
+                case "place":
                 case "commit":
                     if (Commit(worldEdit))
                         return true;
