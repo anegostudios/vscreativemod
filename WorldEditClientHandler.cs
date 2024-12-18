@@ -646,6 +646,9 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "weatherpattern":
                     capi.SendChatMessage("/weather seti " + newValue);
                     break;
+                case "windpattern":
+                    capi.SendChatMessage("/weather setw " + newValue);
+                    break;
                 case "movespeed":
                     capi.World.Player.WorldData.MoveSpeedMultiplier = newValue.ToFloat();
                     break;
