@@ -869,7 +869,6 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public virtual void CreatePreview(BlockSchematic schematic, BlockPos origin)
         {
-            previewBlocks.ClearChunks();
 
             var originPrev = ToolInstance is ImportTool its ? its.Origin : EnumOrigin.StartPos;
             var dim = CreateDimensionFromSchematic(schematic, origin, originPrev);
@@ -891,6 +890,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             }
             else
             {
+                previewBlocks.ClearChunks();
                 previewBlocks.CurrentPos.SetPos(originPos);
             }
             previewBlocks.SetSubDimensionId(DimensionId);

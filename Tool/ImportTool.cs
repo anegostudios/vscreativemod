@@ -384,6 +384,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public override void Unload(ICoreAPI api)
         {
+            workspace.previewBlocks.ClearChunks();
             workspace.PreviewPos = null;
             workspace.PreviewBlockData = null;
         }
