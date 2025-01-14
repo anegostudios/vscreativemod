@@ -173,6 +173,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     .HandleWith(handleImportLarge)
                 .EndSub()
                 .BeginSub("resolve-meta")
+                    .WithAlias("rm")
                     .WithDesc("Toggle resolve meta blocks mode during Worldedit import. Turn it off to spawn structures as they are. For example, in this mode, instead of traders, their meta spawners will spawn")
                     .WithArgs(parsers.OptionalBool("on/off"))
                     .HandleWith(handleToggleImpres)
@@ -327,7 +328,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 sapi.ChatCommands
                     .GetOrCreate("we")
-                    .BeginSub("resolve-meta").WithAlias("impres").WithAlias("rm")
+                    .BeginSub("resolve-meta").WithAlias("impres")
                     .BeginSub("copy").WithAlias("mcopy").EndSub()
                     .BeginSub("scp").WithAlias("mposcopy").EndSub()
                     .BeginSub("paste").WithAlias("mpaste").EndSub()
