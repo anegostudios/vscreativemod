@@ -1,4 +1,6 @@
-﻿namespace Vintagestory.ServerMods.WorldEdit
+﻿
+#nullable disable
+namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumToolOffsetMode
     {

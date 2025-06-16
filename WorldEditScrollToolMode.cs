@@ -4,6 +4,8 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Config;
 using Vintagestory.ServerMods.WorldEdit;
 
+#nullable disable
+
 namespace VSCreativeMod;
 
 public class WorldEditScrollToolMode : GuiDialog

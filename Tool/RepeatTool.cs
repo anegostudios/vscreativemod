@@ -4,6 +4,8 @@ using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumRepeatToolMode
@@ -59,8 +61,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (args.Length > 0)
                         {
-                            int index;
-                            int.TryParse(args[0], out index);
+                            int.TryParse(args[0], out int index);
                             if (Enum.IsDefined(typeof(EnumRepeatToolMode), index))
                             {
                                 mode = (EnumRepeatToolMode)index;
@@ -78,8 +79,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (args.Length > 0)
                         {
-                            int index;
-                            int.TryParse(args[0], out index);
+                            int.TryParse(args[0], out int index);
                             if (Enum.IsDefined(typeof(EnumRepeatSelectionMode), index))
                             {
                                 mode = (EnumRepeatSelectionMode)index;

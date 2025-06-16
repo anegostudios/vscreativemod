@@ -4,6 +4,8 @@ using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumGrowShrinkMode
@@ -126,8 +128,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumGrowShrinkMode), index))
                         {
                             mode = (EnumGrowShrinkMode)index;
@@ -144,8 +145,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float size;
-                        float.TryParse(args[1], out size);
+                        float.TryParse(args[1], out float size);
                         BrushRadius = size;
                     }
 

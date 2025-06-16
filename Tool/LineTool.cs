@@ -3,6 +3,8 @@ using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumLineStartPoint
@@ -53,8 +55,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumLineStartPoint), index))
                         {
                             startpoint = (EnumLineStartPoint)index;

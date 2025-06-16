@@ -5,6 +5,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using VSCreativeMod;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public abstract class ToolBase

@@ -3,6 +3,8 @@ using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumHeightToolMode {
@@ -69,8 +71,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float size;
-                        float.TryParse(args[1], out size);
+                        float.TryParse(args[1], out float size);
                         Radius = size;
                     }
 
@@ -94,8 +95,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float size;
-                        float.TryParse(args[1], out size);
+                        float.TryParse(args[1], out float size);
                         Depth = size;
                     }
 
@@ -108,8 +108,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int mode;
-                        int.TryParse(args[1], out mode);
+                        int.TryParse(args[1], out int mode);
                         try
                         {
                             Mode = (EnumHeightToolMode)mode;

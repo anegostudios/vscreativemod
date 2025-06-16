@@ -7,6 +7,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using VSCreativeMod;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class MoveTool : ToolBase
@@ -95,8 +97,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 0)
                     {
-                        int origin;
-                        int.TryParse(args[0], out origin);
+                        int.TryParse(args[0], out int origin);
                         if (Enum.IsDefined(typeof(EnumOrigin), origin))
                         {
                             Origin = (EnumOrigin)origin;

@@ -2,6 +2,8 @@
 using Vintagestory.API.Server;
 using Vintagestory.ServerMods.WorldEdit;
 
+#nullable disable
+
 namespace Vintagestory.GameContent
 {
     public class ItemMagicWand : Item

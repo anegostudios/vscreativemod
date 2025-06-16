@@ -2,11 +2,13 @@
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class ToolRegistry
     {
-        public static OrderedDictionary<string, Type> ToolTypes = new OrderedDictionary<string, Type>();
+        public static OrderedDictionary<string, Type> ToolTypes = new ();
         public static int NextFreeToolId = 1;
 
         public static ToolBase InstanceFromType(string toolname, WorldEditWorkspace workspace, IBlockAccessor blockAccessor)

@@ -10,6 +10,8 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumWorldEditConstraint
@@ -734,8 +736,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             {
                 if (update.OldBlockId == 0)
                 {
-                    TreeAttribute betree;
-                    if (blockEntityDataByNewPos.TryGetValue(update.Pos, out betree))
+                    if (blockEntityDataByNewPos.TryGetValue(update.Pos, out TreeAttribute betree))
                     {
                         betree.SetInt("posx", update.Pos.X);
                         betree.SetInt("posy", update.Pos.InternalY);

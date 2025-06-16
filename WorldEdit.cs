@@ -11,6 +11,8 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public partial class WorldEdit
@@ -251,8 +253,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public WorldEditWorkspace GetWorkSpace(string playerUid)
         {
-            WorldEditWorkspace space;
-            workspaces.TryGetValue(playerUid, out space);
+            workspaces.TryGetValue(playerUid, out WorldEditWorkspace space);
             return space;
         }
 
@@ -426,7 +427,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult GenMarkedMultiblockCode(IServerPlayer player)
         {
             BlockPos centerPos = player.CurrentBlockSelection.Position;
-            OrderedDictionary<int, int> blocks = new OrderedDictionary<int, int>();
+            API.Datastructures.OrderedDictionary<int, int> blocks = new ();
             List<Vec4i> offsets = new List<Vec4i>();
 
             MultiblockStructure ms = new MultiblockStructure();

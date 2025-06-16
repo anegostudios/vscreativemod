@@ -10,6 +10,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public partial class WorldEdit : ModSystem
@@ -1100,8 +1102,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (suppliedToolname.Length > 0)
             {
-                int toolId;
-                if (int.TryParse(suppliedToolname, NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out toolId))
+                if (int.TryParse(suppliedToolname, NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out int toolId))
                 {
                     if (toolId < 0)
                     {

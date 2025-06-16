@@ -5,6 +5,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumBrushMode
@@ -182,8 +184,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumBrushMode), index))
                         {
                             brushMode = (EnumBrushMode)index;
@@ -201,8 +202,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumDepthLimit), index))
                         {
                             depthLimit = (EnumDepthLimit)index;
@@ -219,8 +219,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumBrushShape), index))
                         {
                             shape = (EnumBrushShape)index;
@@ -270,9 +269,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "tr":
                     {
                         BrushDim1 = 0;
-                        float size;
 
-                        if (args.Length > 1 && float.TryParse(args[1], out size))
+                        if (args.Length > 1 && float.TryParse(args[1], out float size))
                         {
                             BrushDim1 = size;
                         }
@@ -344,9 +342,8 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "tcr":
                     {
                         CutoutDim1 = 0;
-                        float size;
 
-                        if (args.Length > 1 && float.TryParse(args[1], out size))
+                        if (args.Length > 1 && float.TryParse(args[1], out float size))
                         {
                             CutoutDim1 = size;
                         }

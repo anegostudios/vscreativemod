@@ -9,6 +9,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using VSCreativeMod;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class ImportTool : ToolBase
@@ -177,8 +179,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int origin;
-                        int.TryParse(args[1], out origin);
+                        int.TryParse(args[1], out int origin);
                         if (Enum.IsDefined(typeof(EnumOrigin), origin))
                         {
                             Origin = (EnumOrigin)origin;
@@ -194,8 +195,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int replaceable = 0;
-                        int.TryParse(args[1], out replaceable);
+                        int.TryParse(args[1], out int replaceable);
                         if (Enum.IsDefined(typeof(EnumReplaceMode), replaceable))
                         {
                             ReplaceMode = (EnumReplaceMode)replaceable;

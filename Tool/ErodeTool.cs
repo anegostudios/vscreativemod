@@ -5,6 +5,8 @@ using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class ErodeTool : ToolBase
@@ -93,8 +95,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float size;
-                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size);
+                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out float size);
                         BrushRadius = size;
                     }
 
@@ -116,8 +117,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int size;
-                        int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size);
+                        int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out int size);
                         KernelRadius = size;
                     }
 
@@ -141,8 +141,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int iters;
-                        int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out iters);
+                        int.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out int iters);
                         Iterations = iters;
                     }
 

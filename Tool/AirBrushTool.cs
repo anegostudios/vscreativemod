@@ -6,6 +6,8 @@ using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public enum EnumAirBrushMode
@@ -90,8 +92,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float size;
-                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out size);
+                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out float size);
                         Radius = size;
                     }
 
@@ -114,8 +115,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        float quant;
-                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out quant);
+                        float.TryParse(args[1], NumberStyles.Any, GlobalConstants.DefaultCultureInfo, out float quant);
                         Quantity = quant;
                     }
 
@@ -129,8 +129,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (args.Length > 1)
                         {
-                            int index;
-                            int.TryParse(args[1], out index);
+                            int.TryParse(args[1], out int index);
                             if (Enum.IsDefined(typeof(EnumBrushMode), index))
                             {
                                 mode = (EnumBrushMode)index;
@@ -149,8 +148,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (args.Length > 1)
                         {
-                            int index;
-                            int.TryParse(args[1], out index);
+                            int.TryParse(args[1], out int index);
                             if (Enum.IsDefined(typeof(EnumAirBrushMode), index))
                             {
                                 mode = (EnumAirBrushMode)index;
@@ -168,8 +166,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                     if (args.Length > 1)
                     {
-                        int index;
-                        int.TryParse(args[1], out index);
+                        int.TryParse(args[1], out int index);
                         if (Enum.IsDefined(typeof(EnumAirBrushApply), index))
                         {
                             apply = (EnumAirBrushApply)index;

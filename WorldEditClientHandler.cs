@@ -11,6 +11,8 @@ using Vintagestory.API.MathTools;
 using Vintagestory.API.Util;
 using VSCreativeMod;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class GuiDialogConfirmAcceptFile : GuiDialog
@@ -868,8 +870,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (ownWorkspace.FloatValues.ContainsKey(elem))
             {
-                float val = 0;
-                if (float.TryParse(newval, out val))
+                if (float.TryParse(newval, out float val))
                 {
                     ownWorkspace.FloatValues[elem] = val;
                 }
@@ -878,8 +879,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (ownWorkspace.IntValues.ContainsKey(elem))
             {
-                int val = 0;
-                if (int.TryParse(newval, out val))
+                if (int.TryParse(newval, out int val))
                 {
                     ownWorkspace.IntValues[elem] = val;
                 }

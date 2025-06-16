@@ -2,6 +2,8 @@
 using Vintagestory.API.Common;
 using Vintagestory.ServerMods.WorldEdit;
 
+#nullable disable
+
 namespace VSCreativeMod;
 
 public class HudWorldEditInputCapture : HudElement

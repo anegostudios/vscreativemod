@@ -8,6 +8,8 @@ using Vintagestory.API.Server;
 using Vintagestory.API.Util;
 using VSCreativeMod;
 
+#nullable disable
+
 namespace Vintagestory.ServerMods.WorldEdit
 {
     public class SelectTool : ToolBase
@@ -100,7 +102,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                         WorldEdit.Good(player, "Start and End marker normalized");
                     }
                     return true;
-                    break;
                 case "magic":
                 {
                     MagicSelect = (bool)args.PopBool(false);
