@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
@@ -104,7 +104,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "look":
                     {
                         var lookVec = player.Entity.SidedPos.GetViewVector();
-                        var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
+                        var facing = BlockFacing.FromVector(lookVec);
                         Handle(worldEdit, facing, workspace.StepSize);
                         return true;
                     }

@@ -44,35 +44,35 @@ using Vintagestory.API.Config;
     Description = "World editing, worldedit GUI and super flat world generation",
     IconPath = "game/textures/gui/modicon.png",
     Authors = new[] { "Tyron" },
-    WorldConfig = @"
+    WorldConfig = """
     {
-	    playstyles: [
-		    {
-			    code: ""creativebuilding"",
-				playListCode: ""creative"",
-                langcode: ""creativebuilding"",
-                listOrder: 10,
-			    mods: [""game"", ""creative""],
-			    worldType: ""superflat"",
-			    worldConfig: {
-				    worldClimate: ""superflat"",
-				    gameMode: ""creative"",
-				    hoursPerDay: ""2400"",
-					cloudypos: ""0.5"",
-					temporalStability: ""false"",
-                    temporalStorms: ""off"",
-					snowAccum: ""false"",
-					colorAccurateWorldmap: ""true"",
-					temporalRifts: ""off"",
-                    loreContent: ""false""
-			    }
-		    }
-	    ],
-	    worldConfigAttributes: [
+        "playstyles": [
+            {
+                "code": "creativebuilding",
+                "playListCode": "creative",
+                "langCode": "creativebuilding",
+                "listOrder": 10,
+                "mods": ["game", "creative"],
+                "worldType": "superflat",
+                "worldConfig": {
+                    "worldClimate": "superflat",
+                    "gameMode": "creative",
+                    "hoursPerDay": "2400",
+                    "cloudypos": "0.5",
+                    "temporalStability": "false",
+                    "temporalStorms": "off",
+                    "snowAccum": "false",
+                    "colorAccurateWorldmap": "true",
+                    "temporalRifts": "off",
+                    "loreContent": "false"
+                }
+            }
+        ],
+        "worldConfigAttributes": [
 
-	    ]
+        ]
     }
-"
+    """
 )]
 
 [assembly: ModDependency("game")]

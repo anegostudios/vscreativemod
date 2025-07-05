@@ -1,4 +1,4 @@
-﻿using ProtoBuf;
+using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -525,7 +525,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case 0:
                 {
                     var lookVec = pos.GetViewVector();
-                    facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
+                    facing = BlockFacing.FromVector(lookVec);
                     break;
                 }
                 case 1:
