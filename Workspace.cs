@@ -525,7 +525,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case 0:
                 {
                     var lookVec = pos.GetViewVector();
-                    facing = BlockFacing.FromVector(lookVec);
+                    facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     break;
                 }
                 case 1:

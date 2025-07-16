@@ -104,7 +104,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "look":
                     {
                         var lookVec = player.Entity.SidedPos.GetViewVector();
-                        var facing = BlockFacing.FromVector(lookVec);
+                        var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                         Handle(worldEdit, facing, workspace.StepSize);
                         return true;
                     }

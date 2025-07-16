@@ -837,7 +837,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 case "l":
                 case "look":
                     var lookVec = args.Caller.Entity.SidedPos.GetViewVector();
-                    facing = BlockFacing.FromVector(lookVec);
+                    facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     break;
                 default:
                     return null;
