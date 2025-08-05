@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -104,7 +104,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult downloadClaim(TextCommandCallingArgs args)
         {
             var plr = args.Caller.Player as IServerPlayer;
-            var ownclaims = sapi.WorldManager.SaveGame.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
+            var ownclaims = sapi.WorldManager.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
             int claimid = (int)args[0];
             if (claimid < 0 || claimid >= ownclaims.Length)
             {
@@ -141,7 +141,7 @@ namespace Vintagestory.ServerMods.WorldEdit
         private TextCommandResult exportClaim(TextCommandCallingArgs args)
         {
             var plr = args.Caller.Player as IServerPlayer;
-            var ownclaims = sapi.WorldManager.SaveGame.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
+            var ownclaims = sapi.WorldManager.LandClaims.Where(claim => claim.OwnedByPlayerUid == plr.PlayerUID).ToArray();
             int claimid = (int)args[0];
             if (claimid < 0 || claimid >= ownclaims.Length)
             {
