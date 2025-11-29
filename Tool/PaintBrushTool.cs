@@ -413,6 +413,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public override void ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
+            if (withItemStack.Block == null) return;
             PlaceOldBlock(worldEdit, oldBlockId, blockSel, placedBlock);
             PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
             ba.Commit();
