@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -160,13 +160,13 @@ namespace Vintagestory.ServerMods.WorldEdit
             mapheight = worldEdit.sapi.WorldManager.MapSizeY;
 
             var withItemstackBlock = remove ? ba.GetBlock(0) : withItemstack.Block;
-            FloodFillAt(worldEdit, withItemstackBlock, withItemstack, pos.X, pos.Y, pos.Z, remove, oldBlockId);
+            FloodFillAt(worldEdit, withItemstackBlock, withItemstack, pos.X, pos.Y, pos.Z, remove, oldBlockId, pos.dimension);
 
             ba.Commit();
         }
 
 
-        public void FloodFillAt(WorldEdit worldEdit, Block blockToPlace, ItemStack withItemStack, int posX, int posY, int posZ, bool remove, int oldBlockId)
+        public void FloodFillAt(WorldEdit worldEdit, Block blockToPlace, ItemStack withItemStack, int posX, int posY, int posZ, bool remove, int oldBlockId, int dimension)
         {
             var player = (IServerPlayer)worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID);
             bfsQueue.Clear();
@@ -185,7 +185,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             BlockFacing[] faces = Mode == 2 ? BlockFacing.HORIZONTALS : BlockFacing.ALLFACES;
             if (Mode == 1) faces = BlockFacing.HORIZONTALS.Append(BlockFacing.DOWN);
 
-            BlockPos curPos = new BlockPos();
+            BlockPos curPos = new BlockPos(dimension);
 
             var ignWater = IgnoreWater;
             var ignPlants = IgnorePlants;
@@ -209,7 +209,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         var isBoulder = block.Code.PathStartsWith("loose");
                         bool fillable =
                             (ignWater || ba.GetBlock(curPos, BlockLayersAccess.Fluid).Id == 0) &&
-                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Liquid) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder))
+                            (block.Replaceable >= repl || (ignWater && block.BlockMaterial == EnumBlockMaterial.Water) || (ignPlants && block.BlockMaterial == EnumBlockMaterial.Plant) || (ignSurfaceItems && isBoulder))
                             && !fillablePositions.Contains(curPos)
                         ;
                         if (remove)

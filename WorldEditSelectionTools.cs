@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
@@ -110,6 +110,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             Dictionary<BlockPos, TreeAttribute> blockEntityData = new Dictionary<BlockPos, TreeAttribute>();
 
+            var pos = new BlockPos(startPos.dimension);
             BlockPos offset = null;
             while (curRepeats++ < repeats)
             {
@@ -120,7 +121,6 @@ namespace Vintagestory.ServerMods.WorldEdit
                     (endPos.Y - startPos.Y) * dir.Y * curRepeats,
                     (endPos.Z - startPos.Z) * dir.Z * curRepeats
                 );
-                var pos = new BlockPos();
 
                 while (curPos.X < endPos.X)
                 {
@@ -134,7 +134,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                         {
                             var block = revertableBlockAccess.GetBlock(curPos);
                             var blockFluid = revertableBlockAccess.GetBlock(curPos, BlockLayersAccess.Fluid);
-                            var decors = revertableBlockAccess.GetDecors(curPos);
+                            var decors = revertableBlockAccess.GetSubDecors(curPos);
 
                             if (block.EntityClass != null)
                             {
@@ -152,10 +152,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                             }
                             if (decors != null)
                             {
-                                for (var i = 0; i < decors.Length; i++)
+                                foreach (var entry in decors)
                                 {
-                                    if(decors[i] == null) continue;
-                                    revertableBlockAccess.SetDecor(decors[i], pos, i);
+                                    if (entry.Value == null) continue;
+                                    revertableBlockAccess.SetDecor(entry.Value, pos, entry.Key);
                                 }
                             }
 
@@ -209,18 +209,18 @@ namespace Vintagestory.ServerMods.WorldEdit
                     (endPos.Y - originalStart.Y) * dir.Y * curRepeats,
                     (endPos.Z - originalStart.Z) * dir.Z * curRepeats
                 );
-                var pos = new EntityPos();
+                var entityPos = new EntityPos();
                 var entitiesInsideCuboid = world.GetEntitiesInsideCuboid(originalStart, endPos, (e) => !(e is EntityPlayer));
                 foreach (var entity in entitiesInsideCuboid)
                 {
-                    curPos.SetPos(entity.ServerPos.X, entity.ServerPos.Y, entity.ServerPos.Z);
+                    curPos.SetPos(entity.Pos.X, entity.Pos.Y, entity.Pos.Z);
 
-                    pos.SetPos(curPos.X + offset.X, curPos.Y + offset.Y, curPos.Z + offset.Z);
+                    entityPos.SetPos(curPos.X + offset.X, curPos.Y + offset.Y, curPos.Z + offset.Z);
 
                     var newEntity = world.ClassRegistry.CreateEntity(entity.Properties);
-                    newEntity.DidImportOrExport(pos.AsBlockPos.Copy());
-                    newEntity.ServerPos.SetPos(pos);
-                    newEntity.ServerPos.SetAngles(entity.ServerPos);
+                    newEntity.DidImportOrExport(entityPos.AsBlockPos);
+                    newEntity.Pos.SetPos(entityPos);
+                    newEntity.Pos.SetAngles(entity.Pos);
                     world.SpawnEntity(newEntity);
                     revertableBlockAccess.StoreEntitySpawnToHistory(newEntity);
                 }
@@ -267,7 +267,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 (endPos.Z - startPos.Z) * + dir.Normali.Z
             );
 
-            var pos = new BlockPos();
+            var pos = new BlockPos(startPos.dimension);
             Block block;
 
             Dictionary<BlockPos, ITreeAttribute> blockEntityData = new Dictionary<BlockPos, ITreeAttribute>();
@@ -283,7 +283,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     while (curPos.Z < endPos.Z)
                     {
                         var blockId = revertableBlockAccess.GetBlockId(curPos);
-                        var decors = revertableBlockAccess.GetDecors(curPos);
+                        var decors = revertableBlockAccess.GetSubDecors(curPos);
 
                         if (dir.Axis == EnumAxis.Y)
                         {
@@ -313,18 +313,18 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                         if (decors != null)
                         {
-                            for (var i = 0; i < decors.Length; i++)
+                            foreach (var entry in decors)
                             {
-                                if(decors[i] == null) continue;
+                                if (entry.Value == null) continue;
 
-                                var blockFacing = BlockFacing.ALLFACES[i];
+                                var blockFacing = BlockFacing.ALLFACES[entry.Key % 6];
                                 if (blockFacing.Axis == dir.Axis)
                                 {
-                                    revertableBlockAccess.SetDecor(decors[i], pos, blockFacing.Opposite.Index);
+                                    revertableBlockAccess.SetDecor(entry.Value, pos, (entry.Key / 6) * 6 + blockFacing.Opposite.Index);
                                 }
                                 else
                                 {
-                                    revertableBlockAccess.SetDecor(decors[i], pos, i);
+                                    revertableBlockAccess.SetDecor(entry.Value, pos, entry.Key);
                                 }
                             }
                         }
@@ -374,7 +374,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             var entitiesInsideCuboid = world.GetEntitiesInsideCuboid(startOriginal, endOriginal, (e) => !(e is EntityPlayer));
             foreach (var entity in entitiesInsideCuboid)
             {
-                curPosE.SetPos(entity.ServerPos.X, entity.ServerPos.Y, entity.ServerPos.Z);
+                curPosE.SetPos(entity.Pos.X, entity.Pos.Y, entity.Pos.Z);
 
                 // Mirrored position inside the same area
                 var mX = dir.Axis == EnumAxis.X ? startOriginal.X + (endOriginal.X - curPosE.X) : curPosE.X;
@@ -385,8 +385,8 @@ namespace Vintagestory.ServerMods.WorldEdit
 
                 var newEntity = world.ClassRegistry.CreateEntity(entity.Properties);
                 newEntity.DidImportOrExport(posE.AsBlockPos.Copy());
-                newEntity.ServerPos.SetPos(posE);
-                newEntity.ServerPos.SetAngles(entity.ServerPos);
+                newEntity.Pos.SetPos(posE);
+                newEntity.Pos.SetAngles(entity.Pos);
                 world.SpawnEntity(newEntity);
                 revertableBlockAccess.StoreEntitySpawnToHistory(newEntity);
             }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -215,12 +215,12 @@ namespace Vintagestory.ServerMods.WorldEdit
             while (didGrowAny && i < 600)
             {
                 didGrowAny =
-                    TryGrowX(selection, true) ||
-                    TryGrowX(selection, false) ||
-                    TryGrowY(selection, true) ||
-                    TryGrowY(selection, false) ||
-                    TryGrowZ(selection, true) ||
-                    TryGrowZ(selection, false)
+                    TryGrowX(selection, true, pos.dimension) ||
+                    TryGrowX(selection, false, pos.dimension) ||
+                    TryGrowY(selection, true, pos.dimension) ||
+                    TryGrowY(selection, false, pos.dimension) ||
+                    TryGrowZ(selection, true, pos.dimension) ||
+                    TryGrowZ(selection, false, pos.dimension)
                     ;
                 i++;
             }
@@ -228,9 +228,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             return selection;
         }
 
-        private bool TryGrowX(Cuboidi selection, bool positive)
+        private bool TryGrowX(Cuboidi selection, bool positive, int dim)
         {
             bool shouldInclude = false;
+            BlockPos tmpPos = new BlockPos(dim);
 
             for (int y = selection.Y1; !shouldInclude && y < selection.Y2; y++)
             {
@@ -238,7 +239,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     int x = positive ? (selection.X2) : (selection.X1 - 1);
 
-                    Block block = blockAccess.GetBlock(x, y, z);
+                    Block block = blockAccess.GetBlock(tmpPos.Set(x, y, z));
 
                     shouldInclude |= !edgeBlocksCache.Contains(block);
                 }
@@ -261,9 +262,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        private bool TryGrowY(Cuboidi selection, bool positive)
+        private bool TryGrowY(Cuboidi selection, bool positive, int dim)
         {
             bool shouldInclude = false;
+            BlockPos tmpPos = new BlockPos(dim);
 
             for (int x = selection.X1; !shouldInclude && x < selection.X2; x++)
             {
@@ -271,7 +273,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     int y = positive ? (selection.Y2) : (selection.Y1 - 1);
 
-                    Block block = blockAccess.GetBlock(x, y, z);
+                    Block block = blockAccess.GetBlock(tmpPos.Set(x, y, z));
 
                     shouldInclude |= !edgeBlocksCache.Contains(block);
                 }
@@ -294,9 +296,10 @@ namespace Vintagestory.ServerMods.WorldEdit
             return false;
         }
 
-        private bool TryGrowZ(Cuboidi selection, bool positive)
+        private bool TryGrowZ(Cuboidi selection, bool positive, int dim)
         {
             bool shouldInclude = false;
+            BlockPos tmpPos = new BlockPos(dim);
 
             for (int y = selection.Y1; !shouldInclude && y < selection.Y2; y++)
             {
@@ -304,7 +307,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                 {
                     int z = positive ? (selection.Z2) : (selection.Z1 - 1);
 
-                    Block block = blockAccess.GetBlock(x, y, z);
+                    Block block = blockAccess.GetBlock(tmpPos.Set(x, y, z));
 
                     shouldInclude |= !edgeBlocksCache.Contains(block);
                 }

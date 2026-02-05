@@ -90,7 +90,7 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             worldEdit.sapi.World.BlockAccessor.SetBlock(oldBlockId, blockSel.Position);
 
-            if (!workspace.MayPlace(block, startPos.ManhattenDistance(destPos))) return;
+            if (!workspace.MayPlace(block, startPos.ManhattanDistance(destPos))) return;
 
             GameMath.BresenHamPlotLine3d(startPos.X, startPos.Y, startPos.Z, destPos.X, destPos.Y, destPos.Z, (pos) => ba.SetBlock(block.BlockId, pos, withItemStack));
 

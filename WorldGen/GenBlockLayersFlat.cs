@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
@@ -86,17 +86,23 @@ namespace Vintagestory.ServerMods
             mapRegion.ClimateMap = new IntDataMap2D()
             {
                 Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
+                BottomRightPadding = 1,
+                TopLeftPadding= 1,
+                Size = 1
             };
             mapRegion.ForestMap = new IntDataMap2D()
             {
                 Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
+                BottomRightPadding = 1,
+                TopLeftPadding = 1,
+                Size = 1
             };
             mapRegion.ShrubMap = new IntDataMap2D()
             {
                 Data = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 },
-                Size = 2
+                BottomRightPadding = 1,
+                TopLeftPadding = 1,
+                Size = 1
             };
         }
 

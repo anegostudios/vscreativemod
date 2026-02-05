@@ -665,7 +665,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             Block block = world.Blocks[0];
             if (!MayPlace(block, quantityBlocks)) return 0;
 
-            Dictionary<BlockPos, ((int, int), Block[])> blocksByNewPos = new Dictionary<BlockPos, ((int, int), Block[])>();
+            Dictionary<BlockPos, ((int, int), Dictionary<int, Block>)> blocksByNewPos = new ();
             Dictionary<BlockPos, TreeAttribute> blockEntityDataByNewPos = new Dictionary<BlockPos, TreeAttribute>();
 
             revertableBlockAccess.BeginMultiEdit();
@@ -689,7 +689,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                             blockEntityDataByNewPos[newPos] = tree;
                         }
 
-                        var decors = revertableBlockAccess.GetDecors(curPos);
+                        var decors = revertableBlockAccess.GetSubDecors(curPos);
                         var solidBlockId = revertableBlockAccess.GetBlock(curPos).Id;
                         var fluidBlockId = revertableBlockAccess.GetBlock(curPos, BlockLayersAccess.Fluid)?.Id ?? -1;
                         blocksByNewPos[newPos] = ((solidBlockId, fluidBlockId), decors);
@@ -722,10 +722,10 @@ namespace Vintagestory.ServerMods.WorldEdit
                 if (fluidBlockId >= 0)
                     revertableBlockAccess.SetBlock(fluidBlockId, pos, BlockLayersAccess.Fluid);
                 if (decors == null) continue;
-                for (var i = 0; i < decors.Length; i++)
+                foreach (var entry in decors)
                 {
-                    if (decors[i] == null) continue;
-                    revertableBlockAccess.SetDecor(decors[i], pos, i);
+                    if (entry.Value == null) continue;
+                    revertableBlockAccess.SetDecor(entry.Value, pos, entry.Key);
                 }
             }
 

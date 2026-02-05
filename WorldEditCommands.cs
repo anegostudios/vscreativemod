@@ -577,7 +577,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             int maxy = GameMath.Clamp(Math.Max(minPos.Y, maxPos.Y), 0, worldmap.MapSizeY);
             int maxz = GameMath.Clamp(Math.Max(minPos.Z, maxPos.Z), 0, worldmap.MapSizeZ);
 
-            BlockPos tmpPos = new BlockPos();
+            BlockPos tmpPos = new BlockPos(minPos.dimension);
             for (int x = minx; x < maxx; x++)
             {
                 for (int y = miny; y < maxy; y++)
@@ -836,7 +836,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     break;
                 case "l":
                 case "look":
-                    var lookVec = args.Caller.Entity.SidedPos.GetViewVector();
+                    var lookVec = args.Caller.Entity.Pos.GetViewVector();
                     facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     break;
                 default:
@@ -1262,7 +1262,6 @@ namespace Vintagestory.ServerMods.WorldEdit
             IMiniDimension miniDimension = workspace.CreateDimensionFromSchematic(workspace.clipboardBlockData, startPos, EnumOrigin.StartPos);
             if (miniDimension == null) return TextCommandResult.Error("No more Mini Dimensions available");
             Entity launched = GameContent.EntityTestShip.CreateShip(sapi, miniDimension);
-            launched.Pos.SetFrom(launched.ServerPos);
             workspace.world.SpawnEntity(launched);
 
             return TextCommandResult.Success(workspace.clipboardBlockData.BlockIds.Count + " blocks launched");

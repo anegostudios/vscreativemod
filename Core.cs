@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Reflection;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;

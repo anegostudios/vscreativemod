@@ -117,6 +117,9 @@ namespace Vintagestory.ServerMods.WorldEdit
             capi.Input.RegisterHotKey("worldedit", Lang.Get("World Edit"), GlKeys.Tilde, HotkeyType.CreativeTool);
             capi.Input.SetHotKeyHandler("worldedit", OnHotkeyWorldEdit);
 
+            capi.ChatCommands.GetOrCreate("we").WithDescription("Toggle world edit UI").HandleWith(CmdEditClient);
+
+
             capi.Input.RegisterHotKey("worldeditcopy", Lang.Get("World Edit Copy"), GlKeys.C, HotkeyType.CreativeTool,
                 false, true);
             capi.Input.RegisterHotKey("worldeditundo", Lang.Get("World Edit Undo"), GlKeys.Z, HotkeyType.CreativeTool,
@@ -708,7 +711,7 @@ namespace Vintagestory.ServerMods.WorldEdit
             amb.FlatFogDensity.Weight = newWeight;
             amb.FlatFogYPos.Weight = newWeight;
 
-            amb.CloudBrightness.Weight = newWeight;
+            //amb.CloudBrightness.Weight = newWeight;
             amb.CloudDensity.Weight = newWeight;
 
             string jsoncode = JsonConvert.SerializeObject(amb);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.API.Util;
@@ -413,7 +414,12 @@ namespace Vintagestory.ServerMods.WorldEdit
 
         public override void ApplyToolBuild(WorldEdit worldEdit, Block placedBlock, int oldBlockId, BlockSelection blockSel, BlockPos targetPos, ItemStack withItemStack)
         {
-            if (withItemStack.Block == null) return;
+            if (withItemStack?.Item != null)
+            {
+                (worldEdit.sapi.World.PlayerByUid(workspace.PlayerUID) as IServerPlayer).SendIngameError("notmicroblock",
+                    Lang.Get("Must have a chisel material in hands"));
+                return;
+            }
             PlaceOldBlock(worldEdit, oldBlockId, blockSel, placedBlock);
             PerformBrushAction(worldEdit, placedBlock, oldBlockId, blockSel, targetPos, withItemStack);
             ba.Commit();

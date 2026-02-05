@@ -59,7 +59,7 @@ namespace Vintagestory.ServerMods.WorldEdit
                     {
                         return true;
                     }
-                    var lookVec = player.Entity.SidedPos.GetViewVector();
+                    var lookVec = player.Entity.Pos.GetViewVector();
                     var facing = BlockFacing.FromVector(lookVec.X, lookVec.Y, lookVec.Z);
                     Move(facing.Normali);
                     return true;
