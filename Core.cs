@@ -40,6 +40,7 @@ namespace Vintagestory.ServerMods
             base.Start(api);
 
             api.RegisterItemClass("ItemMagicWand", typeof(ItemMagicWand));
+            api.RegisterItemClass("ItemPocketSun", typeof(ItemPocketSun));
             api.RegisterEntity("EntityTestShip", typeof(EntityTestShip));
         }
 

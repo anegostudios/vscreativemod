@@ -1,4 +1,4 @@
-﻿using Vintagestory.API.Common;
+using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 using Vintagestory.ServerMods.WorldEdit;
 
@@ -6,6 +6,19 @@ using Vintagestory.ServerMods.WorldEdit;
 
 namespace Vintagestory.GameContent
 {
+    public class ItemPocketSun : Item
+    {
+        public override float GetTemperature(IWorldAccessor world, ItemStack itemstack)
+        {
+            return 6000;
+        }
+
+        public override float GetTemperature(IWorldAccessor world, ItemStack itemstack, double didReceiveHeat)
+        {
+            return 6000;
+        }
+    }
+
     public class ItemMagicWand : Item
     {
         ICoreServerAPI sapi;
