@@ -398,7 +398,10 @@ namespace Vintagestory.ServerMods.WorldEdit
 
             if (!player.HasPrivilege("worldedit"))
             {
-                player.SendMessage(GlobalConstants.GeneralChatGroup, "No privilege to use", EnumChatType.CommandError);
+                if (showError)
+                {
+                    player.SendMessage(GlobalConstants.GeneralChatGroup, "No privilege to use", EnumChatType.CommandError);
+                }
                 return false;
             }
 
